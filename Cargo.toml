@@ -1,5 +1,5 @@
 [package]
-name = "test_rust_gmp"
+name = "groebner_basis"
 version = "0.1.0"
 authors = ["kyawakyawa <kyawashell@gmail.com>"]
 edition = "2018"

@@ -1,18 +1,20 @@
-use gmp::mpq::Mpq;
+mod scalar;
+
+use scalar::Integer;
 use std::time::Instant;
 
-fn factorial(n: &Mpq) -> Mpq {
-    if n == &Mpq::zero() {
-        Mpq::one()
+fn factorial(n: &Integer) -> Integer {
+    if n == &Integer::zero() {
+        Integer::one()
     } else {
-        n * &factorial(&(n - &Mpq::one()))
+        n * &factorial(&(n - &Integer::one()))
     }
 }
 
 fn main() {
     let start = Instant::now();
     for _i in 0..101 {
-        println!("{}!={}", _i, factorial(&Mpq::from(_i)));
+        println!("{}!={}", _i, factorial(&Integer::from(_i)));
     }
     let end = start.elapsed();
     println!("{}.{:03}sec", end.as_secs(), end.subsec_nanos() / 1_000_000)
