@@ -1,3 +1,4 @@
+mod degree;
 mod scalar;
 
 use scalar::Integer;
@@ -17,5 +18,5 @@ fn main() {
         println!("{}!={}", _i, factorial(&Integer::from(_i)));
     }
     let end = start.elapsed();
-    println!("{}.{:03}sec", end.as_secs(), end.subsec_nanos() / 1_000_000)
+    println!("{}.{:03}sec", end.as_secs(), end.subsec_nanos() / 1_000_000);
 }
