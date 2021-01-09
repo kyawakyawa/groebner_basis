@@ -1,5 +1,6 @@
 mod degree;
 mod monomial;
+mod polynomial;
 mod scalar;
 
 use degree::Zn;

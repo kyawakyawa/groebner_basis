@@ -121,10 +121,14 @@ impl Eq for Zn {}
 
 pub trait Degree {
     fn get_ref_v<'a>(self: &'a Self) -> &'a Vec<Integer>;
+    fn dim(&self) -> usize;
 }
 
 impl Degree for Zn {
     fn get_ref_v<'a>(self: &'a Self) -> &'a Vec<Integer> {
         &(self.v)
+    }
+    fn dim(&self) -> usize {
+        return self.v.len();
     }
 }

@@ -13,13 +13,16 @@ pub enum MonomialOrder {
 #[derive(Clone, Debug)]
 pub struct Monomial {
     alpha: Zn,
+    n: usize,
     monomial_order: MonomialOrder,
 }
 
 impl From<Vec<Integer>> for Monomial {
     fn from(v: Vec<Integer>) -> Self {
+        let n_ = v.len();
         Self {
             alpha: Zn::from(v),
+            n: n_,
             monomial_order: MonomialOrder::Lex,
         }
     }
@@ -27,8 +30,10 @@ impl From<Vec<Integer>> for Monomial {
 
 impl From<(Vec<Integer>, MonomialOrder)> for Monomial {
     fn from(pair: (Vec<Integer>, MonomialOrder)) -> Self {
+        let n_ = pair.0.len();
         Self {
             alpha: Zn::from(pair.0),
+            n: n_,
             monomial_order: pair.1,
         }
     }
@@ -92,10 +97,12 @@ impl<'a, 'b> Mul<&'a Monomial> for &'b Monomial {
     type Output = Monomial;
 
     fn mul(self, other: &Monomial) -> Monomial {
+        assert!(self.n == other.n);
         assert!(self.monomial_order == other.monomial_order);
 
         Monomial {
             alpha: &self.alpha + &other.alpha,
+            n: self.n,
             monomial_order: self.monomial_order,
         }
     }
@@ -105,10 +112,12 @@ impl<'a, 'b> Div<&'a Monomial> for &'b Monomial {
     type Output = Monomial;
 
     fn div(self, other: &Monomial) -> Monomial {
+        assert!(self.n == other.n);
         assert!(self.monomial_order == other.monomial_order);
 
         Monomial {
             alpha: &self.alpha - &other.alpha,
+            n: self.n,
             monomial_order: self.monomial_order,
         }
     }
@@ -135,5 +144,19 @@ impl Ord for Monomial {
             MonomialOrder::Lex => lex(self.alpha.get_ref_v(), other.alpha.get_ref_v()),
             MonomialOrder::Grlex => grlex(self.alpha.get_ref_v(), other.alpha.get_ref_v()),
         }
+    }
+}
+
+pub trait MonomialHandlers {
+    fn set_monomial_order(&mut self, o: MonomialOrder);
+    fn get_n(&self) -> usize;
+}
+
+impl MonomialHandlers for Monomial {
+    fn set_monomial_order(&mut self, o: MonomialOrder) {
+        self.monomial_order = o;
+    }
+    fn get_n(&self) -> usize {
+        self.n
     }
 }
