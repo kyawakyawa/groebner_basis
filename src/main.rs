@@ -1,7 +1,9 @@
 mod degree;
+mod monomial;
 mod scalar;
 
 use degree::Zn;
+use monomial::Monomial;
 use scalar::Integer;
 use std::time::Instant;
 
@@ -30,5 +32,12 @@ fn main() {
     println!("{:?}", &z0 - &z1);
     println!("{:?}", z2);
 
-    println!("{:?}", z0.cmp(&z1));
+    let x = Monomial::from(vec![Integer::from(0), Integer::from(1), Integer::from(2)]);
+    let y = Monomial::from(vec![Integer::from(3), Integer::from(4), Integer::from(5)]);
+
+    println!("{}", x);
+    println!("{:?}", y);
+    println!("{}", &x * &y);
+    println!("{}", &y / &x);
+    println!("{:?}", x.cmp(&y));
 }
