@@ -5,7 +5,8 @@ mod scalar;
 
 use degree::Zn;
 use monomial::Monomial;
-use scalar::Integer;
+use polynomial::{Polynomial, PolynomialHandlers};
+use scalar::{Integer, Rational};
 use std::time::Instant;
 
 fn factorial(n: &Integer) -> Integer {
@@ -41,4 +42,46 @@ fn main() {
     println!("{}", &x * &y);
     println!("{}", &y / &x);
     println!("{:?}", x.cmp(&y));
+
+    let mut f = Polynomial::from(2);
+    f.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(2), Integer::from(1)]),
+    );
+    f.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(1), Integer::from(2)]),
+    );
+    f.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(0), Integer::from(2)]),
+    );
+
+    let mut f1 = Polynomial::from(2);
+    f1.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(0), Integer::from(2)]),
+    );
+    f1.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![Integer::from(0), Integer::from(0)]),
+    );
+
+    let mut f2 = Polynomial::from(2);
+    f2.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(1), Integer::from(1)]),
+    );
+    f2.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![Integer::from(0), Integer::from(0)]),
+    );
+
+    let (a, r) = f.polynomial_divide(&vec![f1, f2]);
+
+    println!("fin");
+    for p in a {
+        println!("{}", p);
+    }
+    println!("{}", r);
 }

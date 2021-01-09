@@ -150,6 +150,7 @@ impl Ord for Monomial {
 pub trait MonomialHandlers {
     fn set_monomial_order(&mut self, o: MonomialOrder);
     fn get_n(&self) -> usize;
+    fn is_divisible_by(&self, rhs: &Monomial) -> bool;
 }
 
 impl MonomialHandlers for Monomial {
@@ -158,5 +159,17 @@ impl MonomialHandlers for Monomial {
     }
     fn get_n(&self) -> usize {
         self.n
+    }
+    fn is_divisible_by(&self, rhs: &Monomial) -> bool {
+        assert_eq!(self.get_n(), rhs.get_n());
+
+        let lv = self.alpha.get_ref_v();
+        let rv = rhs.alpha.get_ref_v();
+        for i in 0..(lv.len()) {
+            if lv[i] < rv[i] {
+                return false;
+            }
+        }
+        true
     }
 }

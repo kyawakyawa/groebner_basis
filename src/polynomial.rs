@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Display, Error, Formatter};
 use std::ops::{Add, Mul, Sub};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Polynomial {
     terms: BTreeMap<Monomial, Rational>,
     n: usize,
@@ -78,43 +78,70 @@ impl From<(Monomial, MonomialOrder)> for Polynomial {
     }
 }
 
+impl From<(Rational, Monomial, MonomialOrder)> for Polynomial {
+    fn from(tuple: (Rational, Monomial, MonomialOrder)) -> Self {
+        let n_ = tuple.1.get_n();
+        let mut terms_ = BTreeMap::new();
+        if tuple.0 != Rational::zero() {
+            terms_.insert(tuple.1, tuple.0);
+        }
+        Self {
+            terms: terms_,
+            n: n_,
+            monomial_order: tuple.2,
+        }
+    }
+}
+
 impl Display for Polynomial {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        let mut comma_separated = String::new();
+        let mut output = String::new();
 
         let mut front = true;
 
-        for (k, v) in &self.terms {
+        let mut terms = Vec::new();
+
+        for pair in &self.terms {
+            terms.push(pair);
+        }
+        let terms = terms;
+
+        for it in terms.iter().rev() {
+            let monomial = it.0;
+            let coeff = it.1;
+
             if front {
-                if v != &Rational::from(0) {
-                    comma_separated.push_str(&v.to_string());
-                    comma_separated.push_str(&k.to_string());
-                    front = true;
+                if coeff != &Rational::from(0) {
+                    output.push_str(&coeff.to_string());
+                    output.push_str(&monomial.to_string());
+                    front = false;
                 }
             } else {
-                if v != &Rational::from(0) {
-                    if v > &Rational::from(0) {
-                        comma_separated.push_str(" + ");
-                        comma_separated.push_str(&v.to_string());
+                if coeff != &Rational::from(0) {
+                    if coeff > &Rational::from(0) {
+                        output.push_str(" + ");
+                        output.push_str(&coeff.to_string());
                     } else {
-                        comma_separated.push_str(" - ");
-                        let mv = &Rational::from(-1) * v;
-                        comma_separated.push_str(&mv.to_string());
+                        output.push_str(" - ");
+                        let mv = &Rational::from(-1) * coeff;
+                        output.push_str(&mv.to_string());
                     }
-                    comma_separated.push_str(&k.to_string());
+                    output.push_str(&monomial.to_string());
                 }
             }
         }
         if front {
-            comma_separated.push_str("0");
+            output.push_str("0");
         }
 
-        comma_separated.push_str(match self.monomial_order {
+        output.push_str(" ");
+
+        output.push_str(match self.monomial_order {
             MonomialOrder::Lex => "Lex",
             MonomialOrder::Grlex => "Grlex",
         });
 
-        write!(f, "{}", comma_separated)
+        write!(f, "{}", output)
     }
 }
 
@@ -139,6 +166,7 @@ impl<'a, 'b> Add<&'a Polynomial> for &'b Polynomial {
         let mut ret = longer.clone();
 
         for (k, v) in &shorter.terms {
+            assert_ne!(v, &Rational::from(0));
             ret.add_term(v.clone(), k.clone());
         }
 
@@ -156,7 +184,8 @@ impl<'a, 'b> Sub<&'a Polynomial> for &'b Polynomial {
         let mut ret = self.clone();
 
         for (k, v) in &other.terms {
-            ret.add_term(v.clone(), k.clone());
+            assert_ne!(v, &Rational::from(0));
+            ret.sub_term(v.clone(), k.clone());
         }
 
         ret
@@ -177,7 +206,9 @@ impl<'a, 'b> Mul<&'a Polynomial> for &'b Polynomial {
         };
 
         for (lx, lc) in &self.terms {
+            assert_ne!(lc, &Rational::from(0));
             for (rx, rc) in &other.terms {
+                assert_ne!(rc, &Rational::from(0));
                 ret.add_term(lc * rc, lx * rx);
             }
         }
@@ -186,27 +217,35 @@ impl<'a, 'b> Mul<&'a Polynomial> for &'b Polynomial {
     }
 }
 
-trait PolynomialHandlers {
+pub trait PolynomialHandlers {
     fn add_monomial(&mut self, x: Monomial);
     fn add_term(&mut self, c: Rational, x: Monomial);
     fn sub_monomial(&mut self, x: Monomial);
     fn sub_term(&mut self, c: Rational, x: Monomial);
 
-    fn polynomial_divide(&self, rhs: &Vec<Polynomial>) -> (Polynomial, Polynomial);
+    fn polynomial_divide(&self, rhses: &Vec<Polynomial>) -> (Vec<Polynomial>, Polynomial);
 
     fn set_monomial_order(&mut self, o: MonomialOrder);
+
+    fn lt(&self) -> Option<Polynomial>;
+    fn lm(&self) -> Option<Monomial>;
+    fn lc(&self) -> Option<Rational>;
 }
 
 impl PolynomialHandlers for Polynomial {
     fn add_term(&mut self, c: Rational, x: Monomial) {
         let res = self.terms.get_mut(&x);
 
-        let new_value = match res {
+        let new_coeff = match res {
             Some(c_) => c_.clone() + c,
             None => c,
         };
 
-        self.terms.insert(x, new_value);
+        if new_coeff != Rational::zero() {
+            self.terms.insert(x, new_coeff);
+        } else {
+            self.terms.remove(&x);
+        }
     }
     fn add_monomial(&mut self, x: Monomial) {
         self.add_term(Rational::from(1), x);
@@ -215,23 +254,122 @@ impl PolynomialHandlers for Polynomial {
     fn sub_term(&mut self, c: Rational, x: Monomial) {
         let res = self.terms.get_mut(&x);
 
-        let new_value = match res {
+        let new_coeff = match res {
             Some(c_) => c_.clone() - c,
             None => -c,
         };
-
-        self.terms.insert(x, new_value);
+        if new_coeff != Rational::zero() {
+            self.terms.insert(x, new_coeff);
+        } else {
+            self.terms.remove(&x);
+        }
     }
     fn sub_monomial(&mut self, x: Monomial) {
         self.sub_term(Rational::from(1), x);
     }
 
-    fn polynomial_divide(&self, rhs: &Vec<Polynomial>) -> (Polynomial, Polynomial) {
-        // TODO
-        (Polynomial::from(self.n), self.clone())
+    fn polynomial_divide(&self, rhses: &Vec<Polynomial>) -> (Vec<Polynomial>, Polynomial) {
+        let monomial_order = self.monomial_order;
+        let n = self.n;
+
+        let mut p = self.clone();
+        let zero = Polynomial::from(self.n);
+
+        let s = rhses.len();
+
+        let mut a = Vec::new();
+        a.resize(s, Polynomial::from(n));
+        let mut r = Polynomial::from(n);
+
+        while &p != &zero {
+            let mut divisionoccurred = false;
+
+            for i in 0..s {
+                let fi = &rhses[i];
+                let lm_fi = fi.lm();
+                let lm_p = p.lm();
+
+                let lm_pair = (lm_p, lm_fi);
+
+                match lm_pair {
+                    (Some(lm_p), Some(lm_fi)) => {
+                        if lm_p.is_divisible_by(&lm_fi) {
+                            let lc_fi = fi.lc();
+                            let lc_p = p.lc();
+
+                            let lc_pair = (lc_p, lc_fi);
+                            match lc_pair {
+                                (Some(lc_p), Some(lc_fi)) => {
+                                    let d = Polynomial::from((
+                                        &lc_p / &lc_fi,
+                                        &lm_p / &lm_fi,
+                                        monomial_order,
+                                    ));
+                                    let ai = &a[i] + &d;
+                                    a[i] = ai;
+
+                                    p = &p - &(&d * fi);
+                                }
+                                (_, _) => {
+                                    assert!(false);
+                                }
+                            }
+
+                            divisionoccurred = true;
+                            break;
+                        }
+                    }
+                    (_, _) => {
+                        assert!(false);
+                    }
+                }
+            }
+            if !divisionoccurred {
+                let lt_p = p.lt();
+                match lt_p {
+                    Some(lt_p) => {
+                        r = &r + &lt_p;
+                        p = &p - &lt_p;
+                    }
+                    None => {
+                        assert!(false);
+                    }
+                }
+            }
+        }
+
+        (a, r)
     }
 
     fn set_monomial_order(&mut self, o: MonomialOrder) {
         self.monomial_order = o;
+    }
+
+    fn lt(&self) -> Option<Polynomial> {
+        let last = self.terms.iter().last();
+        match last {
+            Some((monomial, coeff)) => Some(Polynomial::from((
+                coeff.clone(),
+                monomial.clone(),
+                self.monomial_order,
+            ))),
+            None => None,
+        }
+    }
+
+    fn lm(&self) -> Option<Monomial> {
+        let last = self.terms.iter().last();
+        match last {
+            Some((monomial, _)) => Some(monomial.clone()),
+            None => None,
+        }
+    }
+
+    fn lc(&self) -> Option<Rational> {
+        let last = self.terms.iter().last();
+        match last {
+            Some((_, coeff)) => Some(coeff.clone()),
+            None => None,
+        }
     }
 }
