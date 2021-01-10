@@ -173,6 +173,30 @@ impl<'a, 'b> Add<&'a Polynomial> for &'b Polynomial {
     }
 }
 
+impl Add<&Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, other: &Polynomial) -> Polynomial {
+        &self + other
+    }
+}
+
+impl Add<Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, other: Polynomial) -> Polynomial {
+        self + &other
+    }
+}
+
+impl Add<Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, other: Polynomial) -> Polynomial {
+        &self + &other
+    }
+}
+
 impl<'a, 'b> Sub<&'a Polynomial> for &'b Polynomial {
     type Output = Polynomial;
 
@@ -188,6 +212,30 @@ impl<'a, 'b> Sub<&'a Polynomial> for &'b Polynomial {
         }
 
         ret
+    }
+}
+
+impl Sub<&Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, other: &Polynomial) -> Polynomial {
+        &self - other
+    }
+}
+
+impl Sub<Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, other: Polynomial) -> Polynomial {
+        self - &other
+    }
+}
+
+impl Sub<Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, other: Polynomial) -> Polynomial {
+        &self - &other
     }
 }
 
@@ -213,6 +261,30 @@ impl<'a, 'b> Mul<&'a Polynomial> for &'b Polynomial {
         }
 
         ret
+    }
+}
+
+impl Mul<&Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn mul(self, other: &Polynomial) -> Polynomial {
+        &self * other
+    }
+}
+
+impl Mul<Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn mul(self, other: Polynomial) -> Polynomial {
+        self * &other
+    }
+}
+
+impl Mul<Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn mul(self, other: Polynomial) -> Polynomial {
+        &self * &other
     }
 }
 
@@ -307,7 +379,7 @@ impl PolynomialHandlers for Polynomial {
                                     let ai = &a[i] + &d;
                                     a[i] = ai;
 
-                                    p = &p - &(&d * fi);
+                                    p = &p - (&d * fi);
                                 }
                                 (_, _) => {
                                     assert!(false);
@@ -389,7 +461,7 @@ pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
                     let a = Polynomial::from((lc_f.invert(), &lcm_fg / &lm_f, f.monomial_order));
                     let b = Polynomial::from((lc_g.invert(), &lcm_fg / &lm_g, g.monomial_order));
 
-                    Some(&(&a * f) - &(&b * g))
+                    Some(&a * f - &b * g)
                 }
                 (_, _) => None,
             }
@@ -402,8 +474,96 @@ pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
 mod test {
     use super::{s_polynomial, Polynomial, PolynomialHandlers};
     use crate::monomial;
-    use crate::monomial::Monomial;
+    use crate::monomial::{Monomial, MonomialHandlers};
     use crate::scalar::{Integer, Rational};
+
+    #[test]
+    fn test_polynomial_divide() {
+        let mut f = Polynomial::from(2);
+        f.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(2), Integer::from(1)]),
+        );
+        f.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(1), Integer::from(2)]),
+        );
+        f.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(0), Integer::from(2)]),
+        );
+
+        let mut f0 = Polynomial::from(2);
+        f0.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(0), Integer::from(2)]),
+        );
+        f0.add_term(
+            Rational::from(-1),
+            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
+        );
+
+        let mut f1 = Polynomial::from(2);
+        f1.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(1), Integer::from(1)]),
+        );
+        f1.add_term(
+            Rational::from(-1),
+            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
+        );
+
+        let (a, r) = f.polynomial_divide(&vec![f0.clone(), f1.clone()]);
+
+        let correct = &a[0] * &f0 + &a[1] * &f1 + &r;
+        assert_eq!(f, correct);
+
+        let lm_r = r.lm();
+        let lm_f0 = f0.lm();
+        let lm_f1 = f1.lm();
+
+        match (lm_r, lm_f0, lm_f1) {
+            (Some(lm_r), Some(lm_f0), Some(lm_f1)) => {
+                assert!(!lm_r.is_divisible_by(&lm_f0));
+                assert!(!lm_r.is_divisible_by(&lm_f1));
+            }
+            (_, _, _) => {
+                panic!("failed to calc lm");
+            }
+        }
+
+        // a0
+        let mut correct = Polynomial::from(2);
+        correct.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
+        );
+        correct.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
+        );
+        assert_eq!(a[0], correct);
+
+        // a1
+        let mut correct = Polynomial::from(2);
+        correct.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
+        );
+        assert_eq!(a[1], correct);
+
+        // r
+        let mut correct = Polynomial::from(2);
+        correct.add_term(
+            Rational::from(2),
+            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
+        );
+        correct.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
+        );
+        assert_eq!(r, correct);
+    }
 
     #[test]
     fn test_s_polynomial() {
