@@ -397,3 +397,67 @@ pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
         (_, _) => None,
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::{s_polynomial, Polynomial, PolynomialHandlers};
+    use crate::monomial;
+    use crate::monomial::Monomial;
+    use crate::scalar::{Integer, Rational};
+
+    #[test]
+    fn test_s_polynomial() {
+        let mut f = Polynomial::from((2, monomial::MonomialOrder::Grlex));
+        f.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(3), Integer::from(2)]),
+        );
+        f.add_term(
+            Rational::from(-1),
+            Monomial::from(vec![Integer::from(2), Integer::from(3)]),
+        );
+        f.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
+        );
+
+        let mut g = Polynomial::from((2, monomial::MonomialOrder::Grlex));
+        g.add_term(
+            Rational::from(3),
+            Monomial::from(vec![Integer::from(4), Integer::from(1)]),
+        );
+        g.add_term(
+            Rational::from(1),
+            Monomial::from(vec![Integer::from(0), Integer::from(2)]),
+        );
+
+        let s_fg = s_polynomial(&f, &g);
+
+        match s_fg {
+            Some(s_fg) => {
+                println!("S({}, {}) = {}", f, g, s_fg);
+
+                let mut correct = Polynomial::from((2, monomial::MonomialOrder::Grlex));
+
+                correct.add_term(
+                    Rational::from(-1),
+                    Monomial::from(vec![Integer::from(3), Integer::from(3)]),
+                );
+                correct.add_term(
+                    Rational::from(1),
+                    Monomial::from(vec![Integer::from(2), Integer::from(0)]),
+                );
+                correct.add_term(
+                    &Rational::from(-1) / &Rational::from(3),
+                    Monomial::from(vec![Integer::from(0), Integer::from(3)]),
+                );
+                println!("correct {}", correct);
+
+                assert_eq!(s_fg, correct);
+            }
+            None => {
+                panic!("Failed to compute s polynomial.");
+            }
+        }
+    }
+}
