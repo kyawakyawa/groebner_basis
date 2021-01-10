@@ -84,4 +84,40 @@ fn main() {
         println!("{}", p);
     }
     println!("{}", r);
+
+    // s polynomial
+    let mut f = Polynomial::from((2, monomial::MonomialOrder::Grlex));
+    f.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(3), Integer::from(2)]),
+    );
+    f.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![Integer::from(2), Integer::from(3)]),
+    );
+    f.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(1), Integer::from(0)]),
+    );
+
+    let mut g = Polynomial::from((2, monomial::MonomialOrder::Grlex));
+    g.add_term(
+        Rational::from(3),
+        Monomial::from(vec![Integer::from(4), Integer::from(1)]),
+    );
+    g.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(0), Integer::from(2)]),
+    );
+
+    let s_fg = polynomial::s_polynomial(&f, &g);
+
+    match s_fg {
+        Some(s_fg) => {
+            println!("S({}, {}) = {}", f, g, s_fg);
+        }
+        None => {
+            println!("failed");
+        }
+    }
 }

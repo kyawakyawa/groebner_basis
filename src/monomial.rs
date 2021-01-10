@@ -149,6 +149,7 @@ impl Ord for Monomial {
 
 pub trait MonomialHandlers {
     fn set_monomial_order(&mut self, o: MonomialOrder);
+    fn get_monomial_order(&self) -> MonomialOrder;
     fn get_n(&self) -> usize;
     fn is_divisible_by(&self, rhs: &Monomial) -> bool;
 }
@@ -156,6 +157,9 @@ pub trait MonomialHandlers {
 impl MonomialHandlers for Monomial {
     fn set_monomial_order(&mut self, o: MonomialOrder) {
         self.monomial_order = o;
+    }
+    fn get_monomial_order(&self) -> MonomialOrder {
+        self.monomial_order
     }
     fn get_n(&self) -> usize {
         self.n
@@ -172,4 +176,21 @@ impl MonomialHandlers for Monomial {
         }
         true
     }
+}
+
+pub fn lcm(a: &Monomial, b: &Monomial) -> Monomial {
+    assert_eq!(a.n, b.n);
+    assert_eq!(a.monomial_order, b.monomial_order);
+
+    let va = a.alpha.get_ref_v();
+    let vb = b.alpha.get_ref_v();
+
+    assert_eq!(va.len(), vb.len());
+
+    let mut v = Vec::new();
+    for (ai, bi) in va.iter().zip(vb.iter()) {
+        v.push(std::cmp::max(ai, bi).clone());
+    }
+
+    Monomial::from((v, a.monomial_order))
 }

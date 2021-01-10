@@ -1,3 +1,4 @@
+use crate::monomial;
 use crate::monomial::{Monomial, MonomialHandlers, MonomialOrder};
 use crate::scalar::{Integer, Rational};
 use std::collections::BTreeMap;
@@ -13,27 +14,24 @@ pub struct Polynomial {
 }
 
 impl From<usize> for Polynomial {
-    fn from(n_: usize) -> Self {
+    fn from(n: usize) -> Self {
+        Self::from((n, MonomialOrder::Lex))
+    }
+}
+
+impl From<(usize, MonomialOrder)> for Polynomial {
+    fn from(pair: (usize, MonomialOrder)) -> Self {
         Self {
             terms: BTreeMap::new(),
-            n: n_,
-            monomial_order: MonomialOrder::Lex,
+            n: pair.0,
+            monomial_order: pair.1,
         }
     }
 }
 
 impl From<Vec<Integer>> for Polynomial {
     fn from(v: Vec<Integer>) -> Self {
-        let n_ = v.len();
-        let x = Monomial::from(v);
-        let mut terms_ = BTreeMap::new();
-        terms_.insert(x, Rational::from(1));
-
-        Self {
-            terms: terms_,
-            n: n_,
-            monomial_order: MonomialOrder::Lex,
-        }
+        Self::from((v, MonomialOrder::Lex))
     }
 }
 
@@ -55,12 +53,13 @@ impl From<(Vec<Integer>, MonomialOrder)> for Polynomial {
 impl From<Monomial> for Polynomial {
     fn from(v: Monomial) -> Self {
         let n_ = v.get_n();
+        let monomial_order_ = v.get_monomial_order();
         let mut terms_ = BTreeMap::new();
         terms_.insert(v, Rational::from(1));
         Self {
             terms: terms_,
             n: n_,
-            monomial_order: MonomialOrder::Lex,
+            monomial_order: monomial_order_,
         }
     }
 }
@@ -371,5 +370,30 @@ impl PolynomialHandlers for Polynomial {
             Some((_, coeff)) => Some(coeff.clone()),
             None => None,
         }
+    }
+}
+
+pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
+    assert_eq!(f.monomial_order, g.monomial_order);
+    let lm_f = f.lm();
+    let lm_g = g.lm();
+
+    match (lm_f, lm_g) {
+        (Some(lm_f), Some(lm_g)) => {
+            let lcm_fg = monomial::lcm(&lm_f, &lm_g);
+
+            let lc_f = f.lc();
+            let lc_g = g.lc();
+            match (lc_f, lc_g) {
+                (Some(lc_f), Some(lc_g)) => {
+                    let a = Polynomial::from((lc_f.invert(), &lcm_fg / &lm_f, f.monomial_order));
+                    let b = Polynomial::from((lc_g.invert(), &lcm_fg / &lm_g, g.monomial_order));
+
+                    Some(&(&a * f) - &(&b * g))
+                }
+                (_, _) => None,
+            }
+        }
+        (_, _) => None,
     }
 }
