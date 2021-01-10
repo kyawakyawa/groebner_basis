@@ -168,7 +168,7 @@ fn test_normalize() {
         Monomial::from(vec![Integer::from(1), Integer::from(0)]),
     );
 
-    f.normalize();
+    let f = f.normalize();
 
     let mut correct = Polynomial::from((2, monomial::MonomialOrder::Grlex));
     correct.add_term(

@@ -1,4 +1,5 @@
 mod degree;
+mod groebner_basis;
 mod monomial;
 mod polynomial;
 mod scalar;

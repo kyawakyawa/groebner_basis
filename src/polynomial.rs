@@ -314,6 +314,10 @@ pub trait PolynomialHandlers {
     fn sub_term(&mut self, c: Rational, x: Monomial);
 
     fn polynomial_divide(&self, rhses: &Vec<Polynomial>) -> (Vec<Polynomial>, Polynomial);
+    fn polynomial_divide_ref(&self, rhses: &Vec<&Polynomial>) -> (Vec<Polynomial>, Polynomial);
+
+    fn get_n(&self) -> usize;
+    fn get_monomial_order(&self) -> MonomialOrder;
 
     fn set_monomial_order(&mut self, o: MonomialOrder);
 
@@ -321,7 +325,7 @@ pub trait PolynomialHandlers {
     fn lm(&self) -> Option<Monomial>;
     fn lc(&self) -> Option<Rational>;
 
-    fn normalize(&mut self);
+    fn normalize(self) -> Self;
 }
 
 impl PolynomialHandlers for Polynomial {
@@ -361,6 +365,10 @@ impl PolynomialHandlers for Polynomial {
     }
 
     fn polynomial_divide(&self, rhses: &Vec<Polynomial>) -> (Vec<Polynomial>, Polynomial) {
+        self.polynomial_divide_ref(&rhses.iter().map(|f| f).collect::<Vec<&Polynomial>>())
+    }
+
+    fn polynomial_divide_ref(&self, rhses: &Vec<&Polynomial>) -> (Vec<Polynomial>, Polynomial) {
         let monomial_order = self.monomial_order;
         let n = self.n;
 
@@ -377,7 +385,7 @@ impl PolynomialHandlers for Polynomial {
             let mut divisionoccurred = false;
 
             for i in 0..s {
-                let fi = &rhses[i];
+                let fi = rhses[i];
                 let lm_fi = fi.lm();
                 let lm_p = p.lm();
 
@@ -433,6 +441,14 @@ impl PolynomialHandlers for Polynomial {
         (a, r)
     }
 
+    fn get_n(&self) -> usize {
+        self.n
+    }
+
+    fn get_monomial_order(&self) -> MonomialOrder {
+        self.monomial_order
+    }
+
     fn set_monomial_order(&mut self, o: MonomialOrder) {
         self.monomial_order = o;
     }
@@ -465,17 +481,19 @@ impl PolynomialHandlers for Polynomial {
         }
     }
 
-    fn normalize(&mut self) {
-        let lc = self.lc();
+    fn normalize(self) -> Self {
+        let mut f = self;
+        let lc = f.lc();
         match lc {
             Some(lc) => {
-                self.terms = self
+                f.terms = f
                     .terms
                     .iter()
                     .map(|(monomial, coeff)| (monomial.clone(), coeff / &lc))
                     .collect::<BTreeMap<Monomial, Rational>>();
+                f
             }
-            None => {}
+            None => f,
         }
     }
 }
