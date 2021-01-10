@@ -77,6 +77,25 @@ impl From<(Monomial, MonomialOrder)> for Polynomial {
     }
 }
 
+impl From<(Rational, usize, MonomialOrder)> for Polynomial {
+    fn from(pair: (Rational, usize, MonomialOrder)) -> Self {
+        let mut v = Vec::new();
+        v.resize(pair.1, Integer::from(0));
+
+        Self::from((pair.0, Monomial::from((v, pair.2)), pair.2))
+    }
+}
+
+impl From<(Rational, usize)> for Polynomial {
+    fn from(pair: (Rational, usize)) -> Self {
+        let mut v = Vec::new();
+        v.resize(pair.1, Integer::from(0));
+
+        let monomial_order = MonomialOrder::Lex;
+        Self::from((pair.0, Monomial::from((v, monomial_order)), monomial_order))
+    }
+}
+
 impl From<(Rational, Monomial, MonomialOrder)> for Polynomial {
     fn from(tuple: (Rational, Monomial, MonomialOrder)) -> Self {
         let n_ = tuple.1.get_n();
@@ -301,6 +320,8 @@ pub trait PolynomialHandlers {
     fn lt(&self) -> Option<Polynomial>;
     fn lm(&self) -> Option<Monomial>;
     fn lc(&self) -> Option<Rational>;
+
+    fn normalize(&mut self);
 }
 
 impl PolynomialHandlers for Polynomial {
@@ -443,6 +464,20 @@ impl PolynomialHandlers for Polynomial {
             None => None,
         }
     }
+
+    fn normalize(&mut self) {
+        let lc = self.lc();
+        match lc {
+            Some(lc) => {
+                self.terms = self
+                    .terms
+                    .iter()
+                    .map(|(monomial, coeff)| (monomial.clone(), coeff / &lc))
+                    .collect::<BTreeMap<Monomial, Rational>>();
+            }
+            None => {}
+        }
+    }
 }
 
 pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
@@ -470,154 +505,4 @@ pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::{s_polynomial, Polynomial, PolynomialHandlers};
-    use crate::monomial;
-    use crate::monomial::{Monomial, MonomialHandlers};
-    use crate::scalar::{Integer, Rational};
-
-    #[test]
-    fn test_polynomial_divide() {
-        let mut f = Polynomial::from(2);
-        f.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(2), Integer::from(1)]),
-        );
-        f.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(1), Integer::from(2)]),
-        );
-        f.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(0), Integer::from(2)]),
-        );
-
-        let mut f0 = Polynomial::from(2);
-        f0.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(0), Integer::from(2)]),
-        );
-        f0.add_term(
-            Rational::from(-1),
-            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
-        );
-
-        let mut f1 = Polynomial::from(2);
-        f1.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(1), Integer::from(1)]),
-        );
-        f1.add_term(
-            Rational::from(-1),
-            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
-        );
-
-        let (a, r) = f.polynomial_divide(&vec![f0.clone(), f1.clone()]);
-
-        let correct = &a[0] * &f0 + &a[1] * &f1 + &r;
-        assert_eq!(f, correct);
-
-        let lm_r = r.lm();
-        let lm_f0 = f0.lm();
-        let lm_f1 = f1.lm();
-
-        match (lm_r, lm_f0, lm_f1) {
-            (Some(lm_r), Some(lm_f0), Some(lm_f1)) => {
-                assert!(!lm_r.is_divisible_by(&lm_f0));
-                assert!(!lm_r.is_divisible_by(&lm_f1));
-            }
-            (_, _, _) => {
-                panic!("failed to calc lm");
-            }
-        }
-
-        // a0
-        let mut correct = Polynomial::from(2);
-        correct.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
-        );
-        correct.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
-        );
-        assert_eq!(a[0], correct);
-
-        // a1
-        let mut correct = Polynomial::from(2);
-        correct.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
-        );
-        assert_eq!(a[1], correct);
-
-        // r
-        let mut correct = Polynomial::from(2);
-        correct.add_term(
-            Rational::from(2),
-            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
-        );
-        correct.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(0), Integer::from(0)]),
-        );
-        assert_eq!(r, correct);
-    }
-
-    #[test]
-    fn test_s_polynomial() {
-        let mut f = Polynomial::from((2, monomial::MonomialOrder::Grlex));
-        f.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(3), Integer::from(2)]),
-        );
-        f.add_term(
-            Rational::from(-1),
-            Monomial::from(vec![Integer::from(2), Integer::from(3)]),
-        );
-        f.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(1), Integer::from(0)]),
-        );
-
-        let mut g = Polynomial::from((2, monomial::MonomialOrder::Grlex));
-        g.add_term(
-            Rational::from(3),
-            Monomial::from(vec![Integer::from(4), Integer::from(1)]),
-        );
-        g.add_term(
-            Rational::from(1),
-            Monomial::from(vec![Integer::from(0), Integer::from(2)]),
-        );
-
-        let s_fg = s_polynomial(&f, &g);
-
-        match s_fg {
-            Some(s_fg) => {
-                println!("S({}, {}) = {}", f, g, s_fg);
-
-                let mut correct = Polynomial::from((2, monomial::MonomialOrder::Grlex));
-
-                correct.add_term(
-                    Rational::from(-1),
-                    Monomial::from(vec![Integer::from(3), Integer::from(3)]),
-                );
-                correct.add_term(
-                    Rational::from(1),
-                    Monomial::from(vec![Integer::from(2), Integer::from(0)]),
-                );
-                correct.add_term(
-                    &Rational::from(-1) / &Rational::from(3),
-                    Monomial::from(vec![Integer::from(0), Integer::from(3)]),
-                );
-                println!("correct {}", correct);
-
-                assert_eq!(s_fg, correct);
-            }
-            None => {
-                panic!("Failed to compute s polynomial.");
-            }
-        }
-    }
-}
+mod test;
