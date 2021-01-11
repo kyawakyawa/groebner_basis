@@ -17,6 +17,15 @@ pub struct Monomial {
     monomial_order: MonomialOrder,
 }
 
+impl From<(usize, MonomialOrder)> for Monomial {
+    fn from((n_, monomial_order): (usize, MonomialOrder)) -> Self {
+        let mut v = Vec::new();
+        v.resize(n_, Integer::from(0));
+
+        Monomial::from((v, monomial_order))
+    }
+}
+
 impl From<Vec<Integer>> for Monomial {
     fn from(v: Vec<Integer>) -> Self {
         let n_ = v.len();

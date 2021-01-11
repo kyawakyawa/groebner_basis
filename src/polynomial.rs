@@ -498,7 +498,21 @@ impl PolynomialHandlers for Polynomial {
     }
 }
 
+pub fn lcm_of_lm(f: &Polynomial, g: &Polynomial) -> Option<Monomial> {
+    assert_eq!(f.n, g.n);
+    assert_eq!(f.monomial_order, g.monomial_order);
+
+    let lm_f = f.lm();
+    let lm_g = g.lm();
+
+    match (lm_f, lm_g) {
+        (Some(lm_f), Some(lm_g)) => Some(monomial::lcm(&lm_f, &lm_g)),
+        (_, _) => None,
+    }
+}
+
 pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
+    assert_eq!(f.n, g.n);
     assert_eq!(f.monomial_order, g.monomial_order);
     let lm_f = f.lm();
     let lm_g = g.lm();
