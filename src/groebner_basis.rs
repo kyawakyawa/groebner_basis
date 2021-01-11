@@ -62,13 +62,11 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
         }
     }
 
-    v
+    v.into_iter().map(|f| f.normalize()).collect()
 }
 
-struct PolynomialPair<'a> {
-    fi: &'a Polynomial,
-    fj: &'a Polynomial,
-
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct PolynomialPair {
     lm_fi: Monomial,
     lm_fj: Monomial,
 
@@ -77,29 +75,28 @@ struct PolynomialPair<'a> {
     ij: (usize, usize),
 }
 
-impl<'a> From<(&'a Polynomial, &'a Polynomial, (usize, usize))> for PolynomialPair<'a> {
-    fn from((fi_, fj_, ij_): (&'a Polynomial, &'a Polynomial, (usize, usize))) -> Self {
+impl From<(&Vec<Polynomial>, (usize, usize))> for PolynomialPair {
+    fn from((fs, ij_): (&Vec<Polynomial>, (usize, usize))) -> Self {
         assert_ne!(ij_.0, ij_.1);
 
-        let (fi_, fj_, ij_) = if ij_.0 < ij_.1 {
-            (fi_, fj_, ij_)
-        } else {
-            (fj_, fi_, (ij_.1, ij_.0))
-        };
+        let ij_ = if ij_.0 < ij_.1 { ij_ } else { (ij_.1, ij_.0) };
 
-        assert_eq!(fi_.get_monomial_order(), fj_.get_monomial_order());
-        assert_eq!(fi_.get_n(), fj_.get_n());
+        let i = ij_.0;
+        let j = ij_.1;
 
-        let lm_fi_ = fi_.lm();
-        let lm_fj_ = fj_.lm();
+        let fi = &fs[i];
+        let fj = &fs[j];
+
+        assert_eq!(fi.get_monomial_order(), fj.get_monomial_order());
+        assert_eq!(fi.get_n(), fj.get_n());
+
+        let lm_fi_ = fi.lm();
+        let lm_fj_ = fj.lm();
 
         match (lm_fi_, lm_fj_) {
             (Some(lm_fi_), Some(lm_fj_)) => {
                 let lcm_ = monomial::lcm(&lm_fi_, &lm_fj_);
                 Self {
-                    fi: fi_,
-                    fj: fj_,
-
                     lm_fi: lm_fi_,
                     lm_fj: lm_fj_,
 
@@ -116,21 +113,13 @@ impl<'a> From<(&'a Polynomial, &'a Polynomial, (usize, usize))> for PolynomialPa
     }
 }
 
-impl<'a> PartialEq for PolynomialPair<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        self.ij == other.ij
-    }
-}
-
-impl<'a> Eq for PolynomialPair<'a> {}
-
-impl<'a> PartialOrd for PolynomialPair<'a> {
+impl PartialOrd for PolynomialPair {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> Ord for PolynomialPair<'a> {
+impl Ord for PolynomialPair {
     fn cmp(&self, other: &Self) -> Ordering {
         self.lcm.cmp(&other.lcm)
     }
@@ -152,14 +141,14 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
     let mut fs = fs;
     let mut t = fs.len();
 
-    let mut B = fs
+    let mut pairs = fs
         .iter()
         .enumerate()
-        .map(|(i, gi)| {
+        .map(|(i, _)| {
             fs.iter()
                 .enumerate()
                 .filter(|(j, _)| &i < j)
-                .map(|(j, gj)| PolynomialPair::from((gi, gj, (i.clone(), j.clone()))))
+                .map(|(j, _)| PolynomialPair::from((&fs, (i.clone(), j.clone()))))
                 .collect::<BTreeSet<PolynomialPair>>()
         })
         .flatten()
@@ -167,12 +156,9 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
 
     loop {
         // TODO: pop_firstを使う
-        let mut polynomial_pair = B.iter().next();
-        match polynomial_pair {
+        let polynomial_pair = pairs.iter().next();
+        let (polynomial_pair, can_ignore) = match polynomial_pair {
             Some(polynomial_pair) => {
-                let fi = polynomial_pair.fi;
-                let fj = polynomial_pair.fj;
-
                 let (i, j) = &polynomial_pair.ij;
 
                 let condition0 =
@@ -181,7 +167,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                 let condition1 = fs
                     .iter()
                     .enumerate()
-                    .filter(|(k, hoge)| i != k && j != k)
+                    .filter(|(k, _)| i != k && j != k)
                     .filter(|(k, fk)| {
                         if i == k || j == k {
                             return false;
@@ -194,31 +180,44 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                             }
                         }
                     })
-                    .any(|(k, fk)| {
-                        let s_ik = PolynomialPair::from((fi, fk, (i.clone(), k.clone())));
-                        let s_jk = PolynomialPair::from((fj, fk, (j.clone(), k.clone())));
-                        match (B.get(&s_ik), B.get(&s_jk)) {
+                    .any(|(k, _)| {
+                        let s_ik = PolynomialPair::from((&fs, (i.clone(), k.clone())));
+                        let s_jk = PolynomialPair::from((&fs, (j.clone(), k.clone())));
+                        match (pairs.get(&s_ik), pairs.get(&s_jk)) {
                             (None, None) => true,
                             (_, _) => false,
                         }
                     });
                 let can_ignore = condition0 && condition1;
-                if !can_ignore {
-                    let s = polynomial::s_polynomial(fi, fj);
-                    if let Some(s) = s {
-                        let (_, s) = s.polynomial_divide(&fs);
-                        if s != zero_polynomial {
-                            t = t + 1;
-                            let ft = s;
-                        }
-                    }
-                }
+                (polynomial_pair.clone(), can_ignore)
             }
             None => {
                 break;
             }
+        };
+
+        if !can_ignore {
+            let fi = &fs[polynomial_pair.ij.0];
+            let fj = &fs[polynomial_pair.ij.1];
+
+            let s = polynomial::s_polynomial(fi, fj);
+
+            if let Some(s) = s {
+                let (_, s) = s.polynomial_divide(&fs);
+                if s != zero_polynomial {
+                    let ft = s;
+                    fs.push(ft);
+
+                    for i in 0..t {
+                        pairs.insert(PolynomialPair::from((&fs, (i, t))));
+                    }
+
+                    t = t + 1;
+                }
+            }
         }
+        pairs.remove(&polynomial_pair);
     }
 
-    fs
+    to_reduced_groebner_basis(fs)
 }

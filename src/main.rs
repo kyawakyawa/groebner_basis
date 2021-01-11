@@ -121,4 +121,60 @@ fn main() {
             println!("failed");
         }
     }
+
+    // groebner basis
+    let mut f0 = Polynomial::from((3, monomial::MonomialOrder::Lex));
+    f0.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(2), Integer::from(0), Integer::from(0)]),
+    );
+    f0.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(0), Integer::from(2), Integer::from(0)]),
+    );
+    f0.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(0), Integer::from(0), Integer::from(2)]),
+    );
+    f0.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![Integer::from(0), Integer::from(0), Integer::from(0)]),
+    );
+
+    let mut f1 = Polynomial::from((3, monomial::MonomialOrder::Lex));
+    f1.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(2), Integer::from(0), Integer::from(0)]),
+    );
+    f1.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(0), Integer::from(0), Integer::from(2)]),
+    );
+    f1.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![Integer::from(0), Integer::from(1), Integer::from(0)]),
+    );
+
+    let mut f2 = Polynomial::from((3, monomial::MonomialOrder::Lex));
+    f2.add_term(
+        Rational::from(1),
+        Monomial::from(vec![Integer::from(1), Integer::from(0), Integer::from(0)]),
+    );
+    f2.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![Integer::from(0), Integer::from(0), Integer::from(1)]),
+    );
+
+    let fs = vec![f0, f1, f2];
+    println!("compute groebner basis");
+    for f in fs.iter() {
+        println!("{}", f);
+    }
+
+    let gb = groebner_basis::compute_groebner_basis(fs);
+
+    println!("fin");
+    for g in gb {
+        println!("{}", g);
+    }
 }
