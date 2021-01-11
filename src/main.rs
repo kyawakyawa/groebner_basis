@@ -177,4 +177,137 @@ fn main() {
     for g in gb {
         println!("{}", g);
     }
+
+    // grebner basis 2
+    let mut f0 = Polynomial::from((4, monomial::MonomialOrder::Lex));
+    f0.add_term(
+        Rational::from(3),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(2),
+            Integer::from(0),
+            Integer::from(0),
+        ]),
+    );
+    f0.add_term(
+        Rational::from(2),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(1),
+            Integer::from(1),
+        ]),
+    );
+    f0.add_term(
+        Rational::from(-2),
+        Monomial::from(vec![
+            Integer::from(1),
+            Integer::from(1),
+            Integer::from(0),
+            Integer::from(0),
+        ]),
+    );
+
+    let mut f1 = Polynomial::from((4, monomial::MonomialOrder::Lex));
+    f1.add_term(
+        Rational::from(2),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(1),
+            Integer::from(0),
+            Integer::from(1),
+        ]),
+    );
+    f1.add_term(
+        Rational::from(-2),
+        Monomial::from(vec![
+            Integer::from(1),
+            Integer::from(0),
+            Integer::from(1),
+            Integer::from(0),
+        ]),
+    );
+
+    let mut f2 = Polynomial::from((4, monomial::MonomialOrder::Lex));
+    f2.add_term(
+        Rational::from(2),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(1),
+            Integer::from(1),
+            Integer::from(0),
+        ]),
+    );
+    f2.add_term(
+        Rational::from(-2),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(1),
+        ]),
+    );
+    f2.add_term(
+        Rational::from(-2),
+        Monomial::from(vec![
+            Integer::from(1),
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(1),
+        ]),
+    );
+
+    let mut f3 = Polynomial::from((4, monomial::MonomialOrder::Lex));
+    f3.add_term(
+        Rational::from(1),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(2),
+            Integer::from(0),
+            Integer::from(0),
+        ]),
+    );
+    f3.add_term(
+        Rational::from(1),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(2),
+            Integer::from(0),
+        ]),
+    );
+    f3.add_term(
+        Rational::from(1),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(2),
+        ]),
+    );
+    f3.add_term(
+        Rational::from(-1),
+        Monomial::from(vec![
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(0),
+            Integer::from(0),
+        ]),
+    );
+
+    let fs = vec![f0, f1, f2, f3];
+    println!("compute groebner basis");
+    for f in fs.iter() {
+        println!("{}", f);
+    }
+
+    let start = Instant::now();
+    let gb = groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!("fin");
+    println!("{}.{:03}sec", end.as_secs(), end.subsec_nanos() / 1_000_000);
+    for g in gb {
+        println!("{}", g);
+    }
 }
