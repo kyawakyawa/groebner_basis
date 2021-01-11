@@ -49,9 +49,9 @@ fn test_polynomial_divide() {
     let correct = &a[0] * &f0 + &a[1] * &f1 + &r;
     assert_eq!(f, correct);
 
-    let lm_r = r.lm();
-    let lm_f0 = f0.lm();
-    let lm_f1 = f1.lm();
+    let lm_r = r.fetch_lm();
+    let lm_f0 = f0.fetch_lm();
+    let lm_f1 = f1.fetch_lm();
 
     match (lm_r, lm_f0, lm_f1) {
         (Some(lm_r), Some(lm_f0), Some(lm_f1)) => {

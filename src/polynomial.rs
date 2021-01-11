@@ -1,7 +1,7 @@
 use crate::monomial;
 use crate::monomial::{Monomial, MonomialHandlers, MonomialOrder};
 use crate::scalar::{Integer, Rational};
-use std::collections::BTreeMap;
+use std::{cmp::Ordering, collections::BTreeMap};
 
 use std::fmt::{Debug, Display, Error, Formatter};
 use std::ops::{Add, Mul, Sub};
@@ -307,6 +307,25 @@ impl Mul<Polynomial> for Polynomial {
     }
 }
 
+impl PartialOrd for Polynomial {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Polynomial {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let lm_l = self.fetch_lm();
+        let lm_r = other.fetch_lm();
+
+        match (lm_l, lm_r) {
+            (Some(lm_l), Some(lm_r)) => lm_l.cmp(&lm_r),
+            (_, Some(_)) => Ordering::Less,
+            (Some(_), _) => Ordering::Greater,
+            (_, _) => Ordering::Equal,
+        }
+    }
+}
 pub trait PolynomialHandlers {
     fn add_monomial(&mut self, x: Monomial);
     fn add_term(&mut self, c: Rational, x: Monomial);
@@ -321,9 +340,9 @@ pub trait PolynomialHandlers {
 
     fn set_monomial_order(&mut self, o: MonomialOrder);
 
-    fn lt(&self) -> Option<Polynomial>;
-    fn lm(&self) -> Option<Monomial>;
-    fn lc(&self) -> Option<Rational>;
+    fn fetch_lt(&self) -> Option<Polynomial>;
+    fn fetch_lm(&self) -> Option<Monomial>;
+    fn fetch_lc(&self) -> Option<Rational>;
 
     fn normalize(self) -> Self;
 }
@@ -386,16 +405,16 @@ impl PolynomialHandlers for Polynomial {
 
             for i in 0..s {
                 let fi = rhses[i];
-                let lm_fi = fi.lm();
-                let lm_p = p.lm();
+                let lm_fi = fi.fetch_lm();
+                let lm_p = p.fetch_lm();
 
                 let lm_pair = (lm_p, lm_fi);
 
                 match lm_pair {
                     (Some(lm_p), Some(lm_fi)) => {
                         if lm_p.is_divisible_by(&lm_fi) {
-                            let lc_fi = fi.lc();
-                            let lc_p = p.lc();
+                            let lc_fi = fi.fetch_lc();
+                            let lc_p = p.fetch_lc();
 
                             let lc_pair = (lc_p, lc_fi);
                             match lc_pair {
@@ -425,7 +444,7 @@ impl PolynomialHandlers for Polynomial {
                 }
             }
             if !divisionoccurred {
-                let lt_p = p.lt();
+                let lt_p = p.fetch_lt();
                 match lt_p {
                     Some(lt_p) => {
                         r = &r + &lt_p;
@@ -453,7 +472,7 @@ impl PolynomialHandlers for Polynomial {
         self.monomial_order = o;
     }
 
-    fn lt(&self) -> Option<Polynomial> {
+    fn fetch_lt(&self) -> Option<Polynomial> {
         let last = self.terms.iter().last();
         match last {
             Some((monomial, coeff)) => Some(Polynomial::from((
@@ -465,7 +484,7 @@ impl PolynomialHandlers for Polynomial {
         }
     }
 
-    fn lm(&self) -> Option<Monomial> {
+    fn fetch_lm(&self) -> Option<Monomial> {
         let last = self.terms.iter().last();
         match last {
             Some((monomial, _)) => Some(monomial.clone()),
@@ -473,7 +492,7 @@ impl PolynomialHandlers for Polynomial {
         }
     }
 
-    fn lc(&self) -> Option<Rational> {
+    fn fetch_lc(&self) -> Option<Rational> {
         let last = self.terms.iter().last();
         match last {
             Some((_, coeff)) => Some(coeff.clone()),
@@ -483,7 +502,7 @@ impl PolynomialHandlers for Polynomial {
 
     fn normalize(self) -> Self {
         let mut f = self;
-        let lc = f.lc();
+        let lc = f.fetch_lc();
         match lc {
             Some(lc) => {
                 f.terms = f
@@ -501,15 +520,15 @@ impl PolynomialHandlers for Polynomial {
 pub fn s_polynomial(f: &Polynomial, g: &Polynomial) -> Option<Polynomial> {
     assert_eq!(f.n, g.n);
     assert_eq!(f.monomial_order, g.monomial_order);
-    let lm_f = f.lm();
-    let lm_g = g.lm();
+    let lm_f = f.fetch_lm();
+    let lm_g = g.fetch_lm();
 
     match (lm_f, lm_g) {
         (Some(lm_f), Some(lm_g)) => {
             let lcm_fg = monomial::lcm(&lm_f, &lm_g);
 
-            let lc_f = f.lc();
-            let lc_g = g.lc();
+            let lc_f = f.fetch_lc();
+            let lc_g = g.fetch_lc();
             match (lc_f, lc_g) {
                 (Some(lc_f), Some(lc_g)) => {
                     let a = Polynomial::from((lc_f.invert(), &lcm_fg / &lm_f, f.monomial_order));

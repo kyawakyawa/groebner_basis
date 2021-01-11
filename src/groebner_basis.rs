@@ -62,7 +62,9 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
         }
     }
 
-    v.into_iter().map(|f| f.normalize()).collect()
+    let mut v: Vec<Polynomial> = v.into_iter().map(|f| f.normalize()).collect();
+    v.sort_by(|lhs, rhs| rhs.cmp(lhs)); // 出力は降順で
+    v
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -90,8 +92,8 @@ impl From<(&Vec<Polynomial>, (usize, usize))> for PolynomialPair {
         assert_eq!(fi.get_monomial_order(), fj.get_monomial_order());
         assert_eq!(fi.get_n(), fj.get_n());
 
-        let lm_fi_ = fi.lm();
-        let lm_fj_ = fj.lm();
+        let lm_fi_ = fi.fetch_lm();
+        let lm_fj_ = fj.fetch_lm();
 
         match (lm_fi_, lm_fj_) {
             (Some(lm_fi_), Some(lm_fj_)) => {
@@ -139,6 +141,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
         .collect::<Vec<Polynomial>>();
 
     let mut fs = fs;
+    fs.sort();
     let mut t = fs.len();
 
     let mut pairs = fs
@@ -173,7 +176,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                             return false;
                         }
 
-                        match fk.lm() {
+                        match fk.fetch_lm() {
                             Some(lk_lm) => polynomial_pair.lcm.is_divisible_by(&lk_lm),
                             None => {
                                 true // 零多項式も要らない
@@ -221,3 +224,5 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
 
     to_reduced_groebner_basis(fs)
 }
+
+mod test;
