@@ -1,0 +1,55 @@
+(* = >の証明*)
+
+(*複素数を2つの実数を用いて表す*)
+alpha = a1 + I * a2
+beta = b1 + I * b2
+gamma = c1 + I * c2
+
+
+(*仮定*)
+(*「 A,B,Cは異なり、同一線上に無い」 < = > ベクトルABとベクトルCBとベクトルの外積がでない*)
+f3 = ((a1 - b1) * (c2 - b2) - (a2 - b2) * (c1 - b1)) * v - 1
+=> -1 + (-(a2 - b2) (-b1 + c1) + (a1 - b1) (-b2 + c2)) v
+
+
+(*仮定(結論)*)
+
+(*仮定の式を 左辺-右辺*)
+f = alpha^2 + beta ^2 + gamma ^ 2 - alpha * beta - beta * gamma - gamma * alpha
+
+(*実部だけ取り出す
+f1 = ComplexExpand[Re[f]]
+=> a1^2 - a2^2 - a1 b1 + b1^2 + a2 b2 - b2^2 - a1 c1 - b1 c1 + c12 + a2 c2 + b2 c2 - c2^2
+
+(*虚部だけをを取り出す*)
+f2 = ComplexExpand[Im[f]]
+=> 2 a1 a2 - a2 b1 - a1 b2 + 2 b1 b2 - a2 c1 - b2 c1 - a1 c2 - b1 c2 + 2 c1 c2
+
+
+(*結論(仮定)*)
+(*辺AB BC と辺 の長さが同じ*)
+g1 = ComplexExpand[ (alpha - beta) * Conjugate[alpha - beta] - (beta - gamma) * Conjugate[beta - gamma]]
+=> a1^2 + a2^2 - 2 a1 b1 - 2 a2 b2 + 2 b1 c1 - c1^2 + 2 b2 c2 - c2^2
+
+(*辺 と辺 の長さが同じ BC CA *)
+g2 = ComplexExpand[ (beta - gamma) *  Conjugate[beta - gamma] - (gamma - alpha) * Conjugate[gamma - alpha]]
+=> -a1^2 - a2^2 + b1^2 + b2^2 + 2 a1 c1 - 2 b1 c1 + 2 a2 c2 - 2 b2 c2
+
+(*ヒルベルトの零点定理によるチェック*)
+
+(*g1が<f1,f2,f3>の根基イデアルの含まれるか調べる*)
+GroebnerBasis[{f1, f2, f3, 1 - y * g1}, {a1, a2, b1, b2, c1, c2, v, y}]
+=> {1}
+(*g2が<f1,f2,f3>の根基イデアルの含まれるか調べる*)
+グレブナー基底 GroebnerBasis[{f1, f2, f3, 1 - y * g2}, {a1, a2, b1, b2, c1, c2, v, y}]
+=> {1}
+(* = > の証明終了*)
+
+(*< =の証明*)
+(*ヒルベルトの零点定理によるチェック*)
+(*f1が<g1,g2,f3>の根基イデアルの含まれるか調べる*)
+GroebnerBasis[{g1, g2, f3, 1 - y * f1}, {a1, a2, b1, b2, c1, c2, v, y}]
+=> {1}
+(*f2が<g1,g2,f3>の根基イデアルの含まれるか調べる*)
+GroebnerBasis[{g1, g2, f3, 1 - y * f2}, {a1, a2, b1, b2, c1, c2, v, y}]
+=> {1}

@@ -1,12 +1,12 @@
 use crate::monomial;
 use crate::monomial::{Monomial, MonomialHandlers, MonomialOrder};
 use crate::scalar::{Integer, Rational};
-use std::{cmp::Ordering, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use std::fmt::{Debug, Display, Error, Formatter};
 use std::ops::{Add, Mul, Sub};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Polynomial {
     terms: BTreeMap<Monomial, Rational>,
     n: usize,
@@ -39,7 +39,6 @@ impl From<(Vec<Integer>, MonomialOrder)> for Polynomial {
     fn from(pair: (Vec<Integer>, MonomialOrder)) -> Self {
         let monomial = Monomial::from((pair.0, pair.1));
         Self::from(monomial)
-
     }
 }
 
@@ -289,25 +288,16 @@ impl Mul<Polynomial> for Polynomial {
     }
 }
 
-impl PartialOrd for Polynomial {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+impl PartialEq for Polynomial {
+    fn eq(&self, other: &Self) -> bool {
+        assert_eq!(self.n, other.n);
+        assert_eq!(self.monomial_order, other.monomial_order);
+        self.terms.eq(&other.terms)
     }
 }
 
-impl Ord for Polynomial {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let lm_l = self.fetch_lm();
-        let lm_r = other.fetch_lm();
+impl Eq for Polynomial {}
 
-        match (lm_l, lm_r) {
-            (Some(lm_l), Some(lm_r)) => lm_l.cmp(&lm_r),
-            (_, Some(_)) => Ordering::Less,
-            (Some(_), _) => Ordering::Greater,
-            (_, _) => Ordering::Equal,
-        }
-    }
-}
 pub trait PolynomialHandlers {
     fn add_monomial(&mut self, x: Monomial);
     fn add_term(&mut self, c: Rational, x: Monomial);

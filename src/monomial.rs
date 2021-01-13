@@ -147,7 +147,7 @@ impl<'a, 'b> Div<&'a Monomial> for &'b Monomial {
 impl PartialEq for Monomial {
     fn eq(&self, other: &Self) -> bool {
         assert!(self.monomial_order == other.monomial_order);
-        self.alpha == other.alpha
+        self.cmp(&other) == Ordering::Equal
     }
 }
 

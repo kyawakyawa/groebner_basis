@@ -23,11 +23,28 @@ fn to_minimal_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
             continue;
         }
 
-        let (_, r) = p.polynomial_divide_ref(&gs);
+        let lm_p = p.fetch_lm();
 
-        let zero = Polynomial::from((r.get_n(), r.get_monomial_order()));
-        if r == zero {
-            leaves[i] = false;
+        match lm_p {
+            Some(lm_p) => {
+                for g in gs {
+                    let lm_g = g.fetch_lm();
+                    match lm_g {
+                        Some(lm_g) => {
+                            if lm_p.is_divisible_by(&lm_g) {
+                                leaves[i] = false;
+                                break;
+                            }
+                        }
+                        None => {
+                            panic!("found 0 polynomial");
+                        }
+                    }
+                }
+            }
+            None => {
+                panic!("found 0 polynomial");
+            }
         }
     }
 
@@ -35,7 +52,10 @@ fn to_minimal_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
         .into_iter()
         .enumerate()
         .filter(|(i, _)| leaves[i.clone()])
-        .map(|(_, g)| g.normalize())
+        .map(|(_, g)| {
+            assert_ne!(&g, &Polynomial::from((g.get_n(), g.get_monomial_order())));
+            g.normalize()
+        })
         .collect::<Vec<_>>();
     v
 }
@@ -51,7 +71,10 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
                 .iter()
                 .enumerate()
                 .filter(|(j, _)| &i != j)
-                .map(|(_, g)| g)
+                .map(|(_, g)| {
+                    assert_ne!(g, &Polynomial::from((g.get_n(), g.get_monomial_order())));
+                    g
+                })
                 .collect::<Vec<_>>();
 
             if gs.is_empty() {
@@ -59,6 +82,8 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
             }
 
             let (_, r) = v[i].polynomial_divide_ref(&gs);
+
+            assert_ne!(&r, &Polynomial::from((r.get_n(), r.get_monomial_order())));
 
             if v[i] != r {
                 update_flag = true;
@@ -72,11 +97,27 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
     }
 
     let mut v: Vec<Polynomial> = v.into_iter().map(|f| f.normalize()).collect();
-    v.sort_by(|lhs, rhs| rhs.cmp(lhs)); // 出力は降順で
+    v.sort_by(|lhs, rhs| {
+        let lm_l = lhs.fetch_lm();
+        let lm_r = rhs.fetch_lm();
+
+        match (lm_l, lm_r) {
+            (Some(lm_l), Some(lm_r)) => {
+                lm_r.cmp(&lm_l) // revert
+            }
+            (_, Some(_)) => {
+                std::cmp::Ordering::Greater // revert
+            }
+            (Some(_), _) => {
+                std::cmp::Ordering::Less // revert
+            }
+            (_, _) => std::cmp::Ordering::Equal,
+        }
+    }); // 出力は降順で
     v
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone)]
 struct PolynomialPair {
     lm_fi: Monomial,
     lm_fj: Monomial,
@@ -124,6 +165,14 @@ impl From<(&Vec<Polynomial>, (usize, usize))> for PolynomialPair {
     }
 }
 
+impl PartialEq for PolynomialPair {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(&other) == Ordering::Equal
+    }
+}
+
+impl Eq for PolynomialPair {}
+
 impl PartialOrd for PolynomialPair {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -132,9 +181,19 @@ impl PartialOrd for PolynomialPair {
 
 impl Ord for PolynomialPair {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.lcm.cmp(&other.lcm)
+        if self.ij == other.ij {
+            return Ordering::Equal;
+        }
+
+        let ord_lcm = self.lcm.cmp(&other.lcm);
+        if &ord_lcm != &Ordering::Equal {
+            return ord_lcm;
+        }
+
+        return self.ij.cmp(&other.ij);
     }
 }
+
 pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
     if fs.is_empty() {
         return Vec::new();
@@ -150,7 +209,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
         .collect::<Vec<Polynomial>>();
 
     let mut fs = fs;
-    fs.sort();
+    //fs.sort(); // TODO
     let mut t = fs.len();
 
     let mut pairs = fs
@@ -161,10 +220,12 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                 .enumerate()
                 .filter(|(j, _)| &i < j)
                 .map(|(j, _)| PolynomialPair::from((&fs, (i.clone(), j.clone()))))
-                .collect::<BTreeSet<PolynomialPair>>()
+                .collect::<Vec<PolynomialPair>>()
         })
         .flatten()
         .collect::<BTreeSet<PolynomialPair>>();
+
+    assert_eq!(pairs.len(), t * (t - 1) / 2);
 
     loop {
         // TODO: pop_firstを使う
@@ -186,7 +247,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                             Some(lk_lm) => polynomial_pair.lcm.is_divisible_by(&lk_lm),
                             None => {
                                 panic!("found 0 polynomial");
-                            },
+                            }
                         })
                         .any(|(k, _)| {
                             let s_ik = PolynomialPair::from((&fs, (i.clone(), k.clone())));
