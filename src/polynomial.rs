@@ -37,43 +37,22 @@ impl From<Vec<Integer>> for Polynomial {
 
 impl From<(Vec<Integer>, MonomialOrder)> for Polynomial {
     fn from(pair: (Vec<Integer>, MonomialOrder)) -> Self {
-        let n_ = pair.0.len();
-        let x = Monomial::from(pair.0);
-        let mut terms_ = BTreeMap::new();
-        terms_.insert(x, Rational::from(1));
+        let monomial = Monomial::from((pair.0, pair.1));
+        Self::from(monomial)
 
-        Self {
-            terms: terms_,
-            n: n_,
-            monomial_order: pair.1,
-        }
     }
 }
 
 impl From<Monomial> for Polynomial {
     fn from(v: Monomial) -> Self {
-        let n_ = v.get_n();
-        let monomial_order_ = v.get_monomial_order();
-        let mut terms_ = BTreeMap::new();
-        terms_.insert(v, Rational::from(1));
-        Self {
-            terms: terms_,
-            n: n_,
-            monomial_order: monomial_order_,
-        }
+        let monomial_order = v.get_monomial_order();
+        Polynomial::from((Rational::from(1), v, monomial_order))
     }
 }
 
 impl From<(Monomial, MonomialOrder)> for Polynomial {
     fn from(pair: (Monomial, MonomialOrder)) -> Self {
-        let n_ = pair.0.get_n();
-        let mut terms_ = BTreeMap::new();
-        terms_.insert(pair.0, Rational::from(1));
-        Self {
-            terms: terms_,
-            n: n_,
-            monomial_order: pair.1,
-        }
+        Self::from((Rational::from(1), pair.0, pair.1))
     }
 }
 
@@ -99,15 +78,18 @@ impl From<(Rational, usize)> for Polynomial {
 impl From<(Rational, Monomial, MonomialOrder)> for Polynomial {
     fn from(tuple: (Rational, Monomial, MonomialOrder)) -> Self {
         let n_ = tuple.1.get_n();
-        let mut terms_ = BTreeMap::new();
-        if tuple.0 != Rational::zero() {
-            terms_.insert(tuple.1, tuple.0);
-        }
-        Self {
-            terms: terms_,
+        let mut ret = Self {
+            terms: BTreeMap::new(),
             n: n_,
             monomial_order: tuple.2,
-        }
+        };
+
+        let mut monomial = tuple.1;
+        monomial.set_monomial_order(tuple.2);
+
+        ret.add_term(tuple.0, monomial);
+
+        ret
     }
 }
 
@@ -349,6 +331,10 @@ pub trait PolynomialHandlers {
 
 impl PolynomialHandlers for Polynomial {
     fn add_term(&mut self, c: Rational, x: Monomial) {
+        // fix monomial order
+        let mut x = x;
+        x.set_monomial_order(self.monomial_order);
+
         let res = self.terms.get_mut(&x);
 
         let new_coeff = match res {
@@ -392,13 +378,13 @@ impl PolynomialHandlers for Polynomial {
         let n = self.n;
 
         let mut p = self.clone();
-        let zero = Polynomial::from(self.n);
+        let zero = Polynomial::from((n, monomial_order));
 
         let s = rhses.len();
 
         let mut a = Vec::new();
-        a.resize(s, Polynomial::from(n));
-        let mut r = Polynomial::from(n);
+        a.resize(s, zero.clone());
+        let mut r = zero.clone();
 
         while &p != &zero {
             let mut divisionoccurred = false;
@@ -439,7 +425,7 @@ impl PolynomialHandlers for Polynomial {
                         }
                     }
                     (_, _) => {
-                        assert!(false);
+                        panic!("found 0 polynomial\n p -> {:?}\n fi -> {:?},", p, fi);
                     }
                 }
             }
@@ -470,6 +456,7 @@ impl PolynomialHandlers for Polynomial {
 
     fn set_monomial_order(&mut self, o: MonomialOrder) {
         self.monomial_order = o;
+        // TODO termsにも伝搬させる
     }
 
     fn fetch_lt(&self) -> Option<Polynomial> {

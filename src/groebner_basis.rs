@@ -19,9 +19,14 @@ fn to_minimal_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
             .map(|(_, g)| g)
             .collect::<Vec<_>>();
 
+        if gs.is_empty() {
+            continue;
+        }
+
         let (_, r) = p.polynomial_divide_ref(&gs);
 
-        if r == Polynomial::from(r.get_n()) {
+        let zero = Polynomial::from((r.get_n(), r.get_monomial_order()));
+        if r == zero {
             leaves[i] = false;
         }
     }
@@ -48,6 +53,10 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
                 .filter(|(j, _)| &i != j)
                 .map(|(_, g)| g)
                 .collect::<Vec<_>>();
+
+            if gs.is_empty() {
+                continue;
+            }
 
             let (_, r) = v[i].polynomial_divide_ref(&gs);
 
@@ -166,33 +175,29 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
 
                 let condition0 =
                     polynomial_pair.lcm == &polynomial_pair.lm_fi * &polynomial_pair.lm_fj;
-
-                let condition1 = fs
-                    .iter()
-                    .enumerate()
-                    .filter(|(k, _)| i != k && j != k)
-                    .filter(|(k, fk)| {
-                        if i == k || j == k {
-                            return false;
-                        }
-
-                        match fk.fetch_lm() {
+                if condition0 {
+                    (polynomial_pair.clone(), true)
+                } else {
+                    let can_ignore = fs
+                        .iter()
+                        .enumerate()
+                        .filter(|(k, _)| i != k && j != k)
+                        .filter(|(_, fk)| match fk.fetch_lm() {
                             Some(lk_lm) => polynomial_pair.lcm.is_divisible_by(&lk_lm),
                             None => {
-                                true // 零多項式も要らない
+                                panic!("found 0 polynomial");
+                            },
+                        })
+                        .any(|(k, _)| {
+                            let s_ik = PolynomialPair::from((&fs, (i.clone(), k.clone())));
+                            let s_jk = PolynomialPair::from((&fs, (j.clone(), k.clone())));
+                            match (pairs.get(&s_ik), pairs.get(&s_jk)) {
+                                (None, None) => true,
+                                (_, _) => false,
                             }
-                        }
-                    })
-                    .any(|(k, _)| {
-                        let s_ik = PolynomialPair::from((&fs, (i.clone(), k.clone())));
-                        let s_jk = PolynomialPair::from((&fs, (j.clone(), k.clone())));
-                        match (pairs.get(&s_ik), pairs.get(&s_jk)) {
-                            (None, None) => true,
-                            (_, _) => false,
-                        }
-                    });
-                let can_ignore = condition0 && condition1;
-                (polynomial_pair.clone(), can_ignore)
+                        });
+                    (polynomial_pair.clone(), can_ignore)
+                }
             }
             None => {
                 break;

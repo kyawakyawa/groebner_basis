@@ -8,6 +8,16 @@ pub struct Zn {
     v: Vec<Integer>,
 }
 
+impl From<Vec<i64>> for Zn {
+    fn from(v: Vec<i64>) -> Self {
+        let v = v
+            .into_iter()
+            .map(|i| Integer::from(i))
+            .collect::<Vec<Integer>>();
+        Zn::from(v)
+    }
+}
+
 impl From<Vec<Integer>> for Zn {
     fn from(v: Vec<Integer>) -> Self {
         Self { v }

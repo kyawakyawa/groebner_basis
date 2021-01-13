@@ -26,14 +26,26 @@ impl From<(usize, MonomialOrder)> for Monomial {
     }
 }
 
+impl From<Vec<i64>> for Monomial {
+    fn from(v: Vec<i64>) -> Self {
+        Monomial::from((v, MonomialOrder::Lex))
+    }
+}
+
 impl From<Vec<Integer>> for Monomial {
     fn from(v: Vec<Integer>) -> Self {
-        let n_ = v.len();
-        Self {
-            alpha: Zn::from(v),
-            n: n_,
-            monomial_order: MonomialOrder::Lex,
-        }
+        Monomial::from((v, MonomialOrder::Lex))
+    }
+}
+
+impl From<(Vec<i64>, MonomialOrder)> for Monomial {
+    fn from(pair: (Vec<i64>, MonomialOrder)) -> Self {
+        let v = pair
+            .0
+            .into_iter()
+            .map(|i| Integer::from(i))
+            .collect::<Vec<_>>();
+        Self::from((v, pair.1))
     }
 }
 
