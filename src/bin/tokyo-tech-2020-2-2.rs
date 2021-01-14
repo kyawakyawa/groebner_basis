@@ -1,7 +1,7 @@
 extern crate groebner_basis;
 
 use groebner_basis::monomial::{Monomial, MonomialOrder};
-use groebner_basis::polynomial::Polynomial;
+use groebner_basis::polynomial::{Polynomial, PolynomialHandlers};
 
 /*
 (* A(0, 0) *) (* Aは原点に固定する(一般性は失わない)*)
@@ -71,7 +71,7 @@ fn main() {
 
     // d  -> x10
 
-    let monomial_order = MonomialOrder::Grlex;
+    let monomial_order = MonomialOrder::Lex;
 
     let degree: Vec<i64> = vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     let b1 = Polynomial::from(Monomial::from((degree, monomial_order)));
@@ -142,7 +142,7 @@ fn main() {
 
     println!("GroebnerBasis[f1, f2, f3, f4, f5, f6, f7, g]");
     for (i, p) in ps.iter().enumerate() {
-        println!("  |  p_{} = {}", i + 1, p);
+        println!("  |  p_{} = {}", i + 1, p.clone().integer_coeff());
     }
     println!("\n\n");
 
@@ -161,7 +161,7 @@ fn main() {
 
     println!("GroebnerBasis[f1, f2, f3, f4, f5, f6, f7, h]");
     for (i, q) in qs.iter().enumerate() {
-        println!("  |  q_{} = {}", i + 1, q);
+        println!("  |  q_{} = {}", i + 1, q.clone().integer_coeff());
     }
     println!("\n\n");
 }
