@@ -316,6 +316,8 @@ pub trait PolynomialHandlers {
     fn fetch_lm(&self) -> Option<Monomial>;
     fn fetch_lc(&self) -> Option<Rational>;
 
+    fn fetch_total_degree(&self) -> Option<Integer>;
+
     fn normalize(self) -> Self;
 
     fn integer_coeff(self) -> Self;
@@ -476,6 +478,19 @@ impl PolynomialHandlers for Polynomial {
         match last {
             Some((_, coeff)) => Some(coeff.clone()),
             None => None,
+        }
+    }
+
+    fn fetch_total_degree(&self) -> Option<Integer> {
+        if self.terms.is_empty() {
+            None
+        } else {
+            Some(
+                self.terms
+                    .iter()
+                    .map(|(x, _)| x.fetch_total_degree())
+                    .fold(Integer::from(0), |mx, d| std::cmp::max(mx, d)),
+            )
         }
     }
 

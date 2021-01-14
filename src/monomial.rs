@@ -173,6 +173,8 @@ pub trait MonomialHandlers {
     fn get_monomial_order(&self) -> MonomialOrder;
     fn get_n(&self) -> usize;
     fn is_divisible_by(&self, rhs: &Monomial) -> bool;
+
+    fn fetch_total_degree(&self) -> Integer;
 }
 
 impl MonomialHandlers for Monomial {
@@ -196,6 +198,13 @@ impl MonomialHandlers for Monomial {
             }
         }
         true
+    }
+
+    fn fetch_total_degree(&self) -> Integer {
+        self.alpha
+            .get_ref_v()
+            .iter()
+            .fold(Integer::from(0), |sum, a| sum + a)
     }
 }
 

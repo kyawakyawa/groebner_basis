@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::polynomial::{Polynomial, PolynomialHandlers};
+use crate::scalar::Integer;
 use crate::{monomial, polynomial};
 use monomial::{Monomial, MonomialHandlers};
 
@@ -122,13 +123,15 @@ struct PolynomialPair {
     lm_fi: Monomial,
     lm_fj: Monomial,
 
+    s_polynomial_suger: Integer,
+
     lcm: Monomial,
 
     ij: (usize, usize),
 }
 
-impl From<(&Vec<Polynomial>, (usize, usize))> for PolynomialPair {
-    fn from((fs, ij_): (&Vec<Polynomial>, (usize, usize))) -> Self {
+impl From<(&Vec<Polynomial>, &Vec<Integer>, (usize, usize))> for PolynomialPair {
+    fn from((fs, total_degrees, ij_): (&Vec<Polynomial>, &Vec<Integer>, (usize, usize))) -> Self {
         assert_ne!(ij_.0, ij_.1);
 
         let ij_ = if ij_.0 < ij_.1 { ij_ } else { (ij_.1, ij_.0) };
@@ -139,6 +142,9 @@ impl From<(&Vec<Polynomial>, (usize, usize))> for PolynomialPair {
         let fi = &fs[i];
         let fj = &fs[j];
 
+        let total_degree_i = &total_degrees[i];
+        let total_degree_j = &total_degrees[j];
+
         assert_eq!(fi.get_monomial_order(), fj.get_monomial_order());
         assert_eq!(fi.get_n(), fj.get_n());
 
@@ -148,9 +154,23 @@ impl From<(&Vec<Polynomial>, (usize, usize))> for PolynomialPair {
         match (lm_fi_, lm_fj_) {
             (Some(lm_fi_), Some(lm_fj_)) => {
                 let lcm_ = monomial::lcm(&lm_fi_, &lm_fj_);
+
+                assert!(lcm_.is_divisible_by(&lm_fi_));
+                assert!(lcm_.is_divisible_by(&lm_fj_));
+
+                let ri = &lcm_ / &lm_fi_;
+                let rj = &lcm_ / &lm_fj_;
+
+                let s_polynomial_suger_ = std::cmp::max(
+                    ri.fetch_total_degree() + total_degree_i,
+                    rj.fetch_total_degree() + total_degree_j,
+                );
+
                 Self {
                     lm_fi: lm_fi_,
                     lm_fj: lm_fj_,
+
+                    s_polynomial_suger: s_polynomial_suger_,
 
                     lcm: lcm_,
 
@@ -185,12 +205,18 @@ impl Ord for PolynomialPair {
             return Ordering::Equal;
         }
 
+        let ord_suger = self.s_polynomial_suger.cmp(&other.s_polynomial_suger);
+
+        if &ord_suger != &Ordering::Equal {
+            return ord_suger;
+        }
+
         let ord_lcm = self.lcm.cmp(&other.lcm);
         if &ord_lcm != &Ordering::Equal {
             return ord_lcm;
         }
 
-        return self.ij.cmp(&other.ij);
+        self.ij.cmp(&other.ij)
     }
 }
 
@@ -212,6 +238,19 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
     //fs.sort(); // TODO
     let mut t = fs.len();
 
+    let mut total_degrees = fs
+        .iter()
+        .map(|f| {
+            let total_degree = f.fetch_total_degree();
+            match total_degree {
+                Some(total_degree) => total_degree,
+                None => {
+                    panic!("found 0 polynomial");
+                }
+            }
+        })
+        .collect::<Vec<Integer>>();
+
     let mut pairs = fs
         .iter()
         .enumerate()
@@ -219,7 +258,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
             fs.iter()
                 .enumerate()
                 .filter(|(j, _)| &i < j)
-                .map(|(j, _)| PolynomialPair::from((&fs, (i.clone(), j.clone()))))
+                .map(|(j, _)| PolynomialPair::from((&fs, &total_degrees, (i.clone(), j.clone()))))
                 .collect::<Vec<PolynomialPair>>()
         })
         .flatten()
@@ -250,8 +289,10 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                             }
                         })
                         .any(|(k, _)| {
-                            let s_ik = PolynomialPair::from((&fs, (i.clone(), k.clone())));
-                            let s_jk = PolynomialPair::from((&fs, (j.clone(), k.clone())));
+                            let s_ik =
+                                PolynomialPair::from((&fs, &total_degrees, (i.clone(), k.clone())));
+                            let s_jk =
+                                PolynomialPair::from((&fs, &total_degrees, (j.clone(), k.clone())));
                             match (pairs.get(&s_ik), pairs.get(&s_jk)) {
                                 (None, None) => true,
                                 (_, _) => false,
@@ -275,13 +316,23 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                 let (_, s) = s.polynomial_divide(&fs);
                 if s != zero_polynomial {
                     let ft = s;
-                    fs.push(ft);
+                    let total_degree = ft.fetch_total_degree();
 
-                    for i in 0..t {
-                        pairs.insert(PolynomialPair::from((&fs, (i, t))));
+                    match total_degree {
+                        Some(total_degree) => {
+                            fs.push(ft);
+                            total_degrees.push(total_degree);
+
+                            for i in 0..t {
+                                pairs.insert(PolynomialPair::from((&fs, &total_degrees, (i, t))));
+                            }
+
+                            t = t + 1;
+                        }
+                        None => {
+                            panic!("0 polynomial found");
+                        }
                     }
-
-                    t = t + 1;
                 }
             }
         }
