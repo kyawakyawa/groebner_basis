@@ -1,6 +1,6 @@
-use crate::monomial;
 use crate::monomial::{Monomial, MonomialHandlers, MonomialOrder};
 use crate::scalar::{Integer, Rational};
+use crate::{monomial, scalar};
 use std::collections::BTreeMap;
 
 use std::fmt::{Debug, Display, Error, Formatter};
@@ -317,6 +317,8 @@ pub trait PolynomialHandlers {
     fn fetch_lc(&self) -> Option<Rational>;
 
     fn normalize(self) -> Self;
+
+    fn integer_coeff(self) -> Self;
 }
 
 impl PolynomialHandlers for Polynomial {
@@ -491,6 +493,35 @@ impl PolynomialHandlers for Polynomial {
             }
             None => f,
         }
+    }
+    fn integer_coeff(self) -> Self {
+        if self.terms.is_empty() {
+            return self;
+        }
+        let lcm_den =
+            self.terms
+                .iter()
+                .map(|(_, coeff)| coeff)
+                .fold(Integer::from(1), |lcm_den, a| {
+                    let den = a.get_den();
+
+                    scalar::lcm(&lcm_den, &den)
+                });
+
+        let lcm_den = Rational::from(lcm_den);
+
+        let it = self
+            .terms
+            .into_iter()
+            .map(|(term, coeff)| (term, coeff * &lcm_den));
+
+        let mut ret = Polynomial::from((self.n, self.monomial_order));
+
+        for pair in it {
+            ret.add_term(pair.1, pair.0);
+        }
+
+        ret
     }
 }
 
