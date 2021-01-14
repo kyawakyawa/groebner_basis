@@ -3,6 +3,7 @@ use crate::scalar::{Integer, Rational};
 use crate::{monomial, scalar};
 use std::collections::BTreeMap;
 
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Error, Formatter};
 use std::ops::{Add, Mul, Sub};
 
@@ -98,37 +99,39 @@ impl Display for Polynomial {
 
         let mut front = true;
 
-        let mut terms = Vec::new();
-
-        for pair in &self.terms {
-            terms.push(pair);
-        }
-        let terms = terms;
+        let terms = self.terms.iter().collect::<Vec<(&Monomial, &Rational)>>();
 
         for it in terms.iter().rev() {
             let monomial = it.0;
             let coeff = it.1;
 
-            if front {
-                if coeff != &Rational::from(0) {
-                    output.push_str(&coeff.to_string());
-                    output.push_str(&monomial.to_string());
-                    front = false;
+            let is_show_abs_coeff = |abs_coeff: &Rational, monomial: &Monomial| {
+                // 定数項であるまたは係数の絶対値が1で無い時
+                monomial.fetch_total_degree() == Integer::from(0) || abs_coeff != &Rational::from(1)
+            };
+
+            match coeff.cmp(&Rational::from(0)) {
+                Ordering::Equal => {
+                    continue;
                 }
-            } else {
-                if coeff != &Rational::from(0) {
-                    if coeff > &Rational::from(0) {
+                Ordering::Greater => {
+                    if !front {
                         output.push_str(" + ");
-                        output.push_str(&coeff.to_string());
-                    } else {
-                        output.push_str(" - ");
-                        let mv = &Rational::from(-1) * coeff;
-                        output.push_str(&mv.to_string());
                     }
-                    output.push_str(&monomial.to_string());
                 }
+                Ordering::Less => {
+                    output.push_str(" - ");
+                }
+            };
+            front = false;
+
+            let abs_coeff = coeff.abs();
+            if is_show_abs_coeff(&abs_coeff, monomial) {
+                output.push_str(&abs_coeff.to_string());
             }
+            output.push_str(&monomial.to_string());
         }
+
         if front {
             output.push_str("0");
         }
