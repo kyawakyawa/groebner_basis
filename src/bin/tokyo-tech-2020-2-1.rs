@@ -3,6 +3,7 @@ extern crate groebner_basis;
 use groebner_basis::monomial::{Monomial, MonomialOrder};
 use groebner_basis::polynomial::{Polynomial, PolynomialHandlers};
 use groebner_basis::scalar::Rational;
+use std::time::Instant;
 
 /*
  *
@@ -241,8 +242,15 @@ fn main() {
     let h2 = &one - &y * &g2;
 
     let fs = vec![f1.clone(), f2.clone(), f3.clone(), h1];
+    let start = Instant::now();
     let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
 
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
     println!("GroebnerBasis[f1, f2, f3, 1 - y * g1]");
     for (i, g) in gs.iter().enumerate() {
         println!("  |  p_{} = {}", i + 1, g);
@@ -250,7 +258,15 @@ fn main() {
     println!("\n\n");
 
     let fs = vec![f1.clone(), f2.clone(), f3.clone(), h2];
+    let start = Instant::now();
     let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
     println!("GroebnerBasis[f1, f2, f3,1 - y * g2]");
     for (i, g) in gs.iter().enumerate() {
         println!("  |  q_{} = {}", i + 1, g);
@@ -261,8 +277,15 @@ fn main() {
     let h2 = &one - &y * &f2;
 
     let fs = vec![g1.clone(), g2.clone(), f3.clone(), h1];
+    let start = Instant::now();
     let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
 
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
     println!("GroebnerBasis[g1, g2, f3, 1 - y * f1]");
     for (i, g) in gs.iter().enumerate() {
         println!("  |  r_{} = {}", i + 1, g);
@@ -270,7 +293,16 @@ fn main() {
     println!("\n\n");
 
     let fs = vec![g1.clone(), g2.clone(), f3.clone(), h2];
+    let start = Instant::now();
     let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
+
     println!("GroebnerBasis[g1, g2, f3,1 - y * f2]");
     for (i, g) in gs.iter().enumerate() {
         println!("  |  s_{} = {}", i + 1, g);

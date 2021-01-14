@@ -2,6 +2,7 @@ extern crate groebner_basis;
 
 use groebner_basis::monomial::{Monomial, MonomialOrder};
 use groebner_basis::polynomial::{Polynomial, PolynomialHandlers};
+use std::time::Instant;
 
 /*
 (* A(0, 0) *) (* Aは原点に固定する(一般性は失わない)*)
@@ -138,8 +139,15 @@ fn main() {
         g.clone(),
     ];
 
+    let start = Instant::now();
     let ps = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
 
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
     println!("GroebnerBasis[f1, f2, f3, f4, f5, f6, f7, g]");
     for (i, p) in ps.iter().enumerate() {
         println!("  |  p_{} = {}", i + 1, p.clone().integer_coeff());
@@ -157,8 +165,15 @@ fn main() {
         h.clone(),
     ];
 
+    let start = Instant::now();
     let qs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
 
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
     println!("GroebnerBasis[f1, f2, f3, f4, f5, f6, f7, h]");
     for (i, q) in qs.iter().enumerate() {
         println!("  |  q_{} = {}", i + 1, q.clone().integer_coeff());

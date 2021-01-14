@@ -235,7 +235,22 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
         .collect::<Vec<Polynomial>>();
 
     let mut fs = fs;
-    //fs.sort(); // TODO
+    fs.sort_by(|lhs, rhs| {
+        let ord_total_degree = lhs.fetch_total_degree().cmp(&rhs.fetch_total_degree()); // TODO 高速化
+        if ord_total_degree != Ordering::Equal {
+            return ord_total_degree;
+        }
+        let lm_l = lhs.fetch_lm();
+        let lm_r = rhs.fetch_lm();
+
+        match (lm_l, lm_r) {
+            (Some(lm_l), Some(lm_r)) => lm_l.cmp(&lm_r),
+            (_, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), _) => std::cmp::Ordering::Greater,
+            (_, _) => std::cmp::Ordering::Equal,
+        }
+    });
+
     let mut t = fs.len();
 
     let mut total_degrees = fs

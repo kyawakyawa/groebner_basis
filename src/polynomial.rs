@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Error, Formatter};
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
 #[derive(Clone, Debug)]
 pub struct Polynomial {
@@ -146,7 +146,7 @@ impl Display for Polynomial {
         write!(f, "{}", output)
     }
 }
-
+// TODO 共通化
 impl<'a, 'b> Add<&'a Polynomial> for &'b Polynomial {
     type Output = Polynomial;
 
@@ -178,9 +178,18 @@ impl<'a, 'b> Add<&'a Polynomial> for &'b Polynomial {
 
 impl Add<&Polynomial> for Polynomial {
     type Output = Polynomial;
-
     fn add(self, other: &Polynomial) -> Polynomial {
-        &self + other
+        assert!(self.n == other.n);
+        assert!(self.monomial_order == other.monomial_order);
+
+        let mut ret = self;
+
+        for (k, v) in other.terms.iter() {
+            assert_ne!(v, &Rational::from(0));
+            ret.add_term(v.clone(), k.clone());
+        }
+
+        ret
     }
 }
 
@@ -188,7 +197,17 @@ impl Add<Polynomial> for &Polynomial {
     type Output = Polynomial;
 
     fn add(self, other: Polynomial) -> Polynomial {
-        self + &other
+        assert!(self.n == other.n);
+        assert!(self.monomial_order == other.monomial_order);
+
+        let mut ret = other;
+
+        for (k, v) in self.terms.iter() {
+            assert_ne!(v, &Rational::from(0));
+            ret.add_term(v.clone(), k.clone());
+        }
+
+        ret
     }
 }
 
@@ -196,7 +215,22 @@ impl Add<Polynomial> for Polynomial {
     type Output = Polynomial;
 
     fn add(self, other: Polynomial) -> Polynomial {
-        &self + &other
+        assert!(self.n == other.n);
+        assert!(self.monomial_order == other.monomial_order);
+
+        let (longer, shorter) = match self.terms.len() >= other.terms.len() {
+            true => (self, other),
+            false => (other, self),
+        };
+
+        let mut ret = longer;
+
+        for (k, v) in shorter.terms {
+            assert_ne!(v, Rational::from(0));
+            ret.add_term(v.clone(), k.clone());
+        }
+
+        ret
     }
 }
 
@@ -209,7 +243,7 @@ impl<'a, 'b> Sub<&'a Polynomial> for &'b Polynomial {
 
         let mut ret = self.clone();
 
-        for (k, v) in &other.terms {
+        for (k, v) in other.terms.iter() {
             assert_ne!(v, &Rational::from(0));
             ret.sub_term(v.clone(), k.clone());
         }
@@ -222,7 +256,17 @@ impl Sub<&Polynomial> for Polynomial {
     type Output = Polynomial;
 
     fn sub(self, other: &Polynomial) -> Polynomial {
-        &self - other
+        assert!(self.n == other.n);
+        assert!(self.monomial_order == other.monomial_order);
+
+        let mut ret = self;
+
+        for (k, v) in other.terms.iter() {
+            assert_ne!(v, &Rational::from(0));
+            ret.sub_term(v.clone(), k.clone());
+        }
+
+        ret
     }
 }
 
@@ -230,6 +274,7 @@ impl Sub<Polynomial> for &Polynomial {
     type Output = Polynomial;
 
     fn sub(self, other: Polynomial) -> Polynomial {
+        // TODO clone を無くす
         self - &other
     }
 }
@@ -238,7 +283,17 @@ impl Sub<Polynomial> for Polynomial {
     type Output = Polynomial;
 
     fn sub(self, other: Polynomial) -> Polynomial {
-        &self - &other
+        assert!(self.n == other.n);
+        assert!(self.monomial_order == other.monomial_order);
+
+        let mut ret = self;
+
+        for (k, v) in other.terms {
+            assert_ne!(v, Rational::from(0));
+            ret.sub_term(v, k);
+        }
+
+        ret
     }
 }
 
@@ -291,6 +346,42 @@ impl Mul<Polynomial> for Polynomial {
     }
 }
 
+impl AddAssign for Polynomial {
+    fn add_assign(&mut self, other: Self) {
+        for (k, v) in other.terms {
+            assert_ne!(v, Rational::from(0));
+            self.add_term(v, k);
+        }
+    }
+}
+
+impl AddAssign<&Polynomial> for Polynomial {
+    fn add_assign(&mut self, other: &Self) {
+        for (k, v) in other.terms.iter() {
+            assert_ne!(v, &Rational::from(0));
+            self.add_term(v.clone(), k.clone());
+        }
+    }
+}
+
+impl SubAssign for Polynomial {
+    fn sub_assign(&mut self, other: Self) {
+        for (k, v) in other.terms {
+            assert_ne!(v, Rational::from(0));
+            self.sub_term(v, k);
+        }
+    }
+}
+
+impl SubAssign<&Polynomial> for Polynomial {
+    fn sub_assign(&mut self, other: &Self) {
+        for (k, v) in other.terms.iter() {
+            assert_ne!(v, &Rational::from(0));
+            self.sub_term(v.clone(), k.clone());
+        }
+    }
+}
+
 impl PartialEq for Polynomial {
     fn eq(&self, other: &Self) -> bool {
         assert_eq!(self.n, other.n);
@@ -335,7 +426,12 @@ impl PolynomialHandlers for Polynomial {
         let res = self.terms.get_mut(&x);
 
         let new_coeff = match res {
-            Some(c_) => c_.clone() + c,
+            Some(c_) => {
+                let c_: &Rational = c_;
+                let mut c = c;
+                c += c_;
+                c
+            }
             None => c,
         };
 
@@ -353,7 +449,13 @@ impl PolynomialHandlers for Polynomial {
         let res = self.terms.get_mut(&x);
 
         let new_coeff = match res {
-            Some(c_) => c_.clone() - c,
+            Some(c_) => {
+                let c_: &Rational = c_;
+                let mut c = c;
+                c *= Rational::from(-1);
+                c += c_;
+                c
+            }
             None => -c,
         };
         if new_coeff != Rational::zero() {
@@ -403,14 +505,13 @@ impl PolynomialHandlers for Polynomial {
                             match lc_pair {
                                 (Some(lc_p), Some(lc_fi)) => {
                                     let d = Polynomial::from((
-                                        &lc_p / &lc_fi,
+                                        lc_p / lc_fi,
                                         &lm_p / &lm_fi,
                                         monomial_order,
                                     ));
-                                    let ai = &a[i] + &d;
-                                    a[i] = ai;
 
-                                    p = &p - (&d * fi);
+                                    p -= &d * fi;
+                                    a[i] += d;
                                 }
                                 (_, _) => {
                                     assert!(false);
@@ -430,8 +531,8 @@ impl PolynomialHandlers for Polynomial {
                 let lt_p = p.fetch_lt();
                 match lt_p {
                     Some(lt_p) => {
-                        r = &r + &lt_p;
-                        p = &p - &lt_p;
+                        p -= &lt_p;
+                        r += lt_p;
                     }
                     None => {
                         assert!(false);
