@@ -1,7 +1,7 @@
 extern crate groebner_basis;
 
 use groebner_basis::monomial::{Monomial, MonomialOrder};
-use groebner_basis::polynomial::{Polynomial, PolynomialHandlers};
+use groebner_basis::polynomial::Polynomial;
 use groebner_basis::scalar::Rational;
 use std::time::Instant;
 
@@ -64,6 +64,168 @@ GroebnerBasis[{g1, g2, f3, 1 - y * f2}, {a1, a2, b1, b2, c1, c2, v, y}]
 => {1}
 *
 */
+
+fn main() {
+    // a1 -> x1
+    // a2 -> x2
+
+    // b1 -> x3
+    // b2 -> x4
+
+    // c1 -> x5
+    // c2 -> x6
+
+    // v -> x7
+
+    // y -> x8
+
+    let monomial_order = MonomialOrder::Grlex;
+
+    let degree: Vec<i64> = vec![1, 0, 0, 0, 0, 0, 0, 0];
+    let a1 = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 1, 0, 0, 0, 0, 0, 0];
+    let a2 = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 1, 0, 0, 0, 0, 0];
+    let b1 = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 1, 0, 0, 0, 0];
+    let b2 = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 1, 0, 0, 0];
+    let c1 = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 0, 1, 0, 0];
+    let c2 = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 0, 0, 1, 0];
+    let v = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 0, 0, 0, 1];
+    let y = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 0, 0, 0, 0];
+    let one = Polynomial::from(Monomial::from((degree, monomial_order)));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 0, 0, 0, 0];
+    let minus_one = Polynomial::from((Rational::from(-1), Monomial::from(degree), monomial_order));
+
+    let degree: Vec<i64> = vec![0, 0, 0, 0, 0, 0, 0, 0];
+    let two = Polynomial::from((Rational::from(2), Monomial::from(degree), monomial_order));
+
+    // 仮定の式
+    // f3 = -1 + a2 b1 v - a1 b2 v - a2 c1 v + b2 c1 v + a1 c2 v - b1 c2 v
+    let f3 = &minus_one + &a2 * &b1 * &v - &a1 * &b2 * &v - &a2 * &c1 * &v
+        + &b2 * &c1 * &v
+        + &a1 * &c2 * &v
+        - &b1 * &c2 * &v;
+
+    // f1 = a1^2 - a2^2 - a1 b1 + b1^2 + a2 b2 - b2^2 - a1 c1 - b1 c1 + c1^2 + a2 c2 + b2 c2 - c2^2
+    let f1 = &a1 * &a1 - &a2 * &a2 - &a1 * &b1 + &b1 * &b1 + &a2 * &b2
+        - &b2 * &b2
+        - &a1 * &c1
+        - &b1 * &c1
+        + &c1 * &c1
+        + &a2 * &c2
+        + &b2 * &c2
+        - &c2 * &c2;
+
+    // f2 = 2 a1 a2 - a2 b1 - a1 b2 + 2 b1 b2 - a2 c1 - b2 c1 - a1 c2 - b1 c2 + 2 c1 c2
+    let f2 = &two * &a1 * &a2 - &a2 * &b1 - &a1 * &b2 + &two * &b1 * &b2
+        - &a2 * &c1
+        - &b2 * &c1
+        - &a1 * &c2
+        - &b1 * &c2
+        + &two * &c1 * &c2;
+
+    // g1 = a1^2 + a2^2 - 2 a1 b1 - 2 a2 b2 + 2 b1 c1 - c1^2 + 2 b2 c2 - c2^2
+    let g1 = &a1 * &a1 + &a2 * &a2 - &two * &a1 * &b1 - &two * &a2 * &b2 + &two * &b1 * &c1
+        - &c1 * &c1
+        + &two * &b2 * &c2
+        - &c2 * &c2;
+
+    // g2 = -a1^2 - a2^2 + b1^2 + b2^2 + 2 a1 c1 - 2 b1 c1 + 2 a2 c2 - 2 b2 c2
+    let g2 = &minus_one * &a1 * &a1 - &a2 * &a2 + &b1 * &b1 + &b2 * &b2 + &two * &a1 * &c1
+        - &two * &b1 * &c1
+        + &two * &a2 * &c2
+        - &two * &b2 * &c2;
+
+    // h1 = 1 - y * g1
+    let h1 = &one - &y * &g1;
+    // h2 = 1 - y * g2
+    let h2 = &one - &y * &g2;
+
+    let fs = vec![f1.clone(), f2.clone(), f3.clone(), h1];
+    let start = Instant::now();
+    let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
+    println!("GroebnerBasis[f1, f2, f3, 1 - y * g1]");
+    for (i, g) in gs.iter().enumerate() {
+        println!("  |  p_{} = {}", i + 1, g);
+    }
+    println!("\n\n");
+
+    let fs = vec![f1.clone(), f2.clone(), f3.clone(), h2];
+    let start = Instant::now();
+    let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
+    println!("GroebnerBasis[f1, f2, f3,1 - y * g2]");
+    for (i, g) in gs.iter().enumerate() {
+        println!("  |  q_{} = {}", i + 1, g);
+    }
+    println!("\n\n");
+
+    let h1 = &one - &y * &f1;
+    let h2 = &one - &y * &f2;
+
+    let fs = vec![g1.clone(), g2.clone(), f3.clone(), h1];
+    let start = Instant::now();
+    let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
+    println!("GroebnerBasis[g1, g2, f3, 1 - y * f1]");
+    for (i, g) in gs.iter().enumerate() {
+        println!("  |  r_{} = {}", i + 1, g);
+    }
+    println!("\n\n");
+
+    let fs = vec![g1.clone(), g2.clone(), f3.clone(), h2];
+    let start = Instant::now();
+    let gs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let end = start.elapsed();
+
+    println!(
+        "compute Groebner Basis in {}.{:03}sec",
+        end.as_secs(),
+        end.subsec_nanos() / 1_000_000
+    );
+
+    println!("GroebnerBasis[g1, g2, f3,1 - y * f2]");
+    for (i, g) in gs.iter().enumerate() {
+        println!("  |  s_{} = {}", i + 1, g);
+    }
+    println!("\n\n");
+}
+
+/*
 fn main() {
     // a1 -> x1
     // a2 -> x2
@@ -309,3 +471,4 @@ fn main() {
     }
     println!("\n\n");
 }
+*/

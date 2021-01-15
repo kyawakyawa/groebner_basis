@@ -140,8 +140,20 @@ fn main() {
     ];
 
     let start = Instant::now();
-    let ps = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let mut ps = groebner_basis::groebner_basis::compute_groebner_basis(fs);
     let end = start.elapsed();
+
+    ps.sort_by(|lhs, rhs| {
+        let lm_l = lhs.fetch_lm();
+        let lm_r = rhs.fetch_lm();
+
+        match (lm_l, lm_r) {
+            (Some(lm_l), Some(lm_r)) => lm_l.cmp(&lm_r),
+            (_, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), _) => std::cmp::Ordering::Greater,
+            (_, _) => std::cmp::Ordering::Equal,
+        }
+    });
 
     println!(
         "compute Groebner Basis in {}.{:03}sec",
@@ -166,8 +178,20 @@ fn main() {
     ];
 
     let start = Instant::now();
-    let qs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
+    let mut qs = groebner_basis::groebner_basis::compute_groebner_basis(fs);
     let end = start.elapsed();
+
+    qs.sort_by(|lhs, rhs| {
+        let lm_l = lhs.fetch_lm();
+        let lm_r = rhs.fetch_lm();
+
+        match (lm_l, lm_r) {
+            (Some(lm_l), Some(lm_r)) => lm_l.cmp(&lm_r),
+            (_, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), _) => std::cmp::Ordering::Greater,
+            (_, _) => std::cmp::Ordering::Equal,
+        }
+    });
 
     println!(
         "compute Groebner Basis in {}.{:03}sec",
