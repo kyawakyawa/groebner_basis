@@ -634,13 +634,41 @@ impl PolynomialHandlers for Polynomial {
             .into_iter()
             .map(|(term, coeff)| (term, coeff * &lcm_den));
 
-        let mut ret = Polynomial::from((self.n, self.monomial_order));
+        let mut tmp = Polynomial::from((self.n, self.monomial_order));
 
+        // TODO mul_rational or *= Rationalを作って利用
         for pair in it {
-            ret.add_term(pair.1, pair.0);
+            tmp.add_term(pair.1, pair.0);
         }
 
-        ret
+        let tmp = tmp;
+
+        let lc = tmp.fetch_lc();
+
+        if let Some(lc) = lc {
+            let gcd_num = tmp.terms.iter().map(|(_, coeff)| coeff).fold(
+                Integer::from(lc.get_num().abs()),
+                |gcd_num, a| {
+                    let num = a.get_num().abs();
+                    scalar::gcd(&gcd_num, &num)
+                },
+            );
+
+            let it = tmp
+                .terms
+                .into_iter()
+                .map(|(term, coeff)| (term, coeff / Rational::from(gcd_num.clone())));
+
+            let mut ret = Polynomial::from((tmp.n, tmp.monomial_order));
+
+            for pair in it {
+                ret.add_term(pair.1, pair.0);
+            }
+
+            ret
+        } else {
+            panic!("unexpected thing occured");
+        }
     }
 }
 
