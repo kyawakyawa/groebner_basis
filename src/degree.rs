@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Error, Formatter};
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use crate::scalar::Integer;
 
@@ -51,47 +51,142 @@ impl Add<Zn> for Zn {
     type Output = Zn;
 
     fn add(self, other: Zn) -> Zn {
-        let mut ret = self.v.clone();
+        let mut ret = self;
 
-        let n = std::cmp::min(ret.len(), other.v.len());
+        assert_eq!(ret.v.len(), other.v.len());
+        let n = std::cmp::min(ret.v.len(), other.v.len());
 
         for i in 0..n {
-            ret[i] = &ret[i] + &other.v[i];
+            ret.v[i] += &other.v[i];
         }
 
-        Zn { v: ret }
+        ret
+    }
+}
+
+impl Add<&Zn> for Zn {
+    type Output = Zn;
+
+    fn add(self, rhs: &Zn) -> Zn {
+        let mut ret = self;
+
+        assert_eq!(ret.v.len(), rhs.v.len());
+        let n = std::cmp::min(ret.v.len(), rhs.v.len());
+
+        for i in 0..n {
+            ret.v[i] += &rhs.v[i];
+        }
+
+        ret
+    }
+}
+
+impl Add<Zn> for &Zn {
+    type Output = Zn;
+
+    fn add(self, rhs: Zn) -> Zn {
+        let mut ret = rhs;
+
+        assert_eq!(ret.v.len(), self.v.len());
+        let n = std::cmp::min(ret.v.len(), self.v.len());
+
+        for i in 0..n {
+            ret.v[i] += &self.v[i];
+        }
+
+        ret
     }
 }
 
 impl<'a, 'b> Add<&'a Zn> for &'b Zn {
     type Output = Zn;
 
-    fn add(self, other: &Zn) -> Zn {
-        let mut ret = self.v.clone();
+    fn add(self, rhs: &Zn) -> Zn {
+        let mut ret = self.clone();
 
-        let n = std::cmp::min(ret.len(), other.v.len());
+        assert_eq!(ret.v.len(), rhs.v.len());
+        let n = std::cmp::min(ret.v.len(), rhs.v.len());
 
         for i in 0..n {
-            ret[i] = &ret[i] + &other.v[i];
+            ret.v[i] += &rhs.v[i];
         }
 
-        Zn { v: ret }
+        ret
     }
 }
 
-impl Sub for Zn {
-    type Output = Zn;
-
-    fn sub(self, other: Zn) -> Zn {
-        let mut ret = self.v.clone();
-
-        let n = std::cmp::min(ret.len(), other.v.len());
+impl AddAssign<Zn> for Zn {
+    fn add_assign(&mut self, rhs: Zn) {
+        assert_eq!(self.v.len(), rhs.v.len());
+        let n = std::cmp::min(self.v.len(), rhs.v.len());
 
         for i in 0..n {
-            ret[i] = &ret[i] - &other.v[i];
+            self.v[i] += &rhs.v[i];
+        }
+    }
+}
+
+impl AddAssign<&Zn> for Zn {
+    fn add_assign(&mut self, rhs: &Zn) {
+        assert_eq!(self.v.len(), rhs.v.len());
+        let n = std::cmp::min(self.v.len(), rhs.v.len());
+
+        for i in 0..n {
+            self.v[i] += &rhs.v[i];
+        }
+    }
+}
+
+impl Sub<Zn> for Zn {
+    type Output = Zn;
+
+    fn sub(self, rhs: Zn) -> Zn {
+        let mut ret = self;
+
+        assert_eq!(ret.v.len(), rhs.v.len());
+        let n = std::cmp::min(ret.v.len(), rhs.v.len());
+
+        for i in 0..n {
+            ret.v[i] -= &rhs.v[i];
         }
 
-        Zn { v: ret }
+        ret
+    }
+}
+
+impl Sub<&Zn> for Zn {
+    type Output = Zn;
+
+    fn sub(self, rhs: &Zn) -> Zn {
+        let mut ret = self;
+
+        assert_eq!(ret.v.len(), rhs.v.len());
+        let n = std::cmp::min(ret.v.len(), rhs.v.len());
+
+        for i in 0..n {
+            ret.v[i] -= &rhs.v[i];
+        }
+
+        ret
+    }
+}
+
+impl Sub<Zn> for &Zn {
+    type Output = Zn;
+
+    fn sub(self, rhs: Zn) -> Zn {
+        let mut ret = rhs;
+
+        assert_eq!(ret.v.len(), self.v.len());
+        let n = std::cmp::min(ret.v.len(), self.v.len());
+
+        let minus = Integer::from(-1);
+        for i in 0..n {
+            ret.v[i] -= &self.v[i];
+            ret.v[i] *= &minus;
+        }
+
+        ret
     }
 }
 
@@ -99,15 +194,38 @@ impl<'a, 'b> Sub<&'a Zn> for &'b Zn {
     type Output = Zn;
 
     fn sub(self, other: &Zn) -> Zn {
-        let mut ret = self.v.clone();
+        let mut ret = self.clone();
 
-        let n = std::cmp::min(ret.len(), other.v.len());
+        assert_eq!(ret.v.len(), other.v.len());
+        let n = std::cmp::min(ret.v.len(), other.v.len());
 
         for i in 0..n {
-            ret[i] = &ret[i] - &other.v[i];
+            ret.v[i] -= &other.v[i];
         }
 
-        Zn { v: ret }
+        ret
+    }
+}
+
+impl SubAssign<Zn> for Zn {
+    fn sub_assign(&mut self, rhs: Zn) {
+        assert_eq!(self.v.len(), rhs.v.len());
+        let n = std::cmp::min(self.v.len(), rhs.v.len());
+
+        for i in 0..n {
+            self.v[i] -= &rhs.v[i];
+        }
+    }
+}
+
+impl SubAssign<&Zn> for Zn {
+    fn sub_assign(&mut self, rhs: &Zn) {
+        assert_eq!(self.v.len(), rhs.v.len());
+        let n = std::cmp::min(self.v.len(), rhs.v.len());
+
+        for i in 0..n {
+            self.v[i] -= &rhs.v[i];
+        }
     }
 }
 

@@ -114,6 +114,48 @@ fn grlex(lhs: &Vec<Integer>, rhs: &Vec<Integer>) -> Ordering {
     lex(lhs, rhs)
 }
 
+impl Mul<Monomial> for Monomial {
+    type Output = Monomial;
+
+    fn mul(self, rhs: Monomial) -> Monomial {
+        assert!(self.n == rhs.n);
+        assert!(self.monomial_order == rhs.monomial_order);
+
+        let mut ret = self;
+        ret.alpha += &rhs.alpha;
+
+        ret
+    }
+}
+
+impl Mul<Monomial> for &Monomial {
+    type Output = Monomial;
+
+    fn mul(self, rhs: Monomial) -> Monomial {
+        assert!(self.n == rhs.n);
+        assert!(self.monomial_order == rhs.monomial_order);
+
+        let mut ret = rhs;
+        ret.alpha += &self.alpha;
+
+        ret
+    }
+}
+
+impl Mul<&Monomial> for Monomial {
+    type Output = Monomial;
+
+    fn mul(self, rhs: &Monomial) -> Monomial {
+        assert!(self.n == rhs.n);
+        assert!(self.monomial_order == rhs.monomial_order);
+
+        let mut ret = self;
+        ret.alpha += &rhs.alpha;
+
+        ret
+    }
+}
+
 impl<'a, 'b> Mul<&'a Monomial> for &'b Monomial {
     type Output = Monomial;
 
@@ -224,3 +266,5 @@ pub fn lcm(a: &Monomial, b: &Monomial) -> Monomial {
 
     Monomial::from((v, a.monomial_order))
 }
+
+mod test;

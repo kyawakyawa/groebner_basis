@@ -346,6 +346,28 @@ impl Mul<Polynomial> for Polynomial {
     }
 }
 
+impl Mul<(&Rational, &Monomial)> for Polynomial {
+    type Output = Polynomial;
+
+    fn mul(self, rhs: (&Rational, &Monomial)) -> Polynomial {
+        let coeff = rhs.0;
+        let monomial = rhs.1;
+
+        assert_eq!(self.monomial_order, monomial.get_monomial_order());
+        let terms_ = self
+            .terms
+            .into_iter()
+            .map(|(k, v)| (k * monomial, v * coeff))
+            .collect::<BTreeMap<_, _>>();
+
+        Polynomial {
+            n: self.n,
+            monomial_order: self.monomial_order,
+            terms: terms_,
+        }
+    }
+}
+
 impl AddAssign for Polynomial {
     fn add_assign(&mut self, other: Self) {
         for (k, v) in other.terms {
@@ -504,14 +526,11 @@ impl PolynomialHandlers for Polynomial {
                             let lc_pair = (lc_p, lc_fi);
                             match lc_pair {
                                 (Some(lc_p), Some(lc_fi)) => {
-                                    let d = Polynomial::from((
-                                        lc_p / lc_fi,
-                                        &lm_p / &lm_fi,
-                                        monomial_order,
-                                    ));
+                                    let lc_p_fi = lc_p / lc_fi;
+                                    let lm_p_fi = &lm_p / &lm_fi;
 
-                                    p -= &d * fi;
-                                    a[i] += d;
+                                    p -= fi.clone() * (&lc_p_fi, &lm_p_fi);
+                                    a[i] += Polynomial::from((lc_p_fi, lm_p_fi, monomial_order));
                                 }
                                 (_, _) => {
                                     assert!(false);
