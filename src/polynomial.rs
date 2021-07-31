@@ -423,6 +423,9 @@ pub trait PolynomialHandlers {
     fn polynomial_divide(&self, rhses: &Vec<Polynomial>) -> (Vec<Polynomial>, Polynomial);
     fn polynomial_divide_ref(&self, rhses: &Vec<&Polynomial>) -> (Vec<Polynomial>, Polynomial);
 
+    fn polynomial_mod(&self, rhses: &Vec<Polynomial>) -> Polynomial;
+    fn polynomial_mod_ref(&self, rhses: &Vec<&Polynomial>) -> Polynomial;
+
     fn get_n(&self) -> usize;
     fn get_monomial_order(&self) -> MonomialOrder;
 
@@ -561,6 +564,76 @@ impl PolynomialHandlers for Polynomial {
         }
 
         (a, r)
+    }
+
+    fn polynomial_mod(&self, rhses: &Vec<Polynomial>) -> Polynomial {
+        self.polynomial_mod_ref(&rhses.iter().map(|f| f).collect::<Vec<&Polynomial>>())
+    }
+
+    fn polynomial_mod_ref(&self, rhses: &Vec<&Polynomial>) -> Polynomial {
+        let monomial_order = self.monomial_order;
+        let n = self.n;
+
+        let mut p = self.clone();
+        let zero = Polynomial::from((n, monomial_order));
+
+        let s = rhses.len();
+
+        let mut r = zero.clone();
+
+        while &p != &zero {
+            let mut divisionoccurred = false;
+
+            for i in 0..s {
+                let fi = rhses[i];
+                let lm_fi = fi.fetch_lm();
+                let lm_p = p.fetch_lm();
+
+                let lm_pair = (lm_p, lm_fi);
+
+                match lm_pair {
+                    (Some(lm_p), Some(lm_fi)) => {
+                        if lm_p.is_divisible_by(&lm_fi) {
+                            let lc_fi = fi.fetch_lc();
+                            let lc_p = p.fetch_lc();
+
+                            let lc_pair = (lc_p, lc_fi);
+                            match lc_pair {
+                                (Some(lc_p), Some(lc_fi)) => {
+                                    let lc_p_fi = lc_p / lc_fi;
+                                    let lm_p_fi = &lm_p / &lm_fi;
+
+                                    p -= fi.clone() * (&lc_p_fi, &lm_p_fi);
+                                }
+                                (_, _) => {
+                                    assert!(false);
+                                }
+                            }
+
+                            divisionoccurred = true;
+                            break;
+                        }
+                    }
+                    (_, _) => {
+                        panic!("found 0 polynomial\n p -> {:?}\n fi -> {:?},", p, fi);
+                    }
+                }
+            }
+            if !divisionoccurred {
+                let lt_p = p.fetch_lt();
+                match lt_p {
+                    Some(lt_p) => {
+                        p -= &lt_p;
+                        r += lt_p;
+                    }
+                    None => {
+                        assert!(false);
+                    }
+                }
+            }
+        }
+
+        r
     }
 
     fn get_n(&self) -> usize {
