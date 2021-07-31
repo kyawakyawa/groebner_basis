@@ -61,19 +61,19 @@ fn to_minimal_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
     v
 }
 
-fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
-    let mut v = to_minimal_groebner_basis(v);
-
+fn reduce_ideal_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
+    let mut v = v;
     loop {
         let mut update_flag = false;
 
         for i in 0..(v.len()) {
+            // gs = v - {v[i]}
             let gs = v
                 .iter()
                 .enumerate()
                 .filter(|(j, _)| &i != j)
                 .map(|(_, g)| {
-                    assert_ne!(g, &Polynomial::from((g.get_n(), g.get_monomial_order())));
+                    assert_ne!(g, &Polynomial::from((g.get_n(), g.get_monomial_order()))); // Not zero polynomial
                     g
                 })
                 .collect::<Vec<_>>();
@@ -97,6 +97,14 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
         }
     }
 
+    v
+}
+
+fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
+    let v = to_minimal_groebner_basis(v);
+
+    let v = reduce_ideal_basis(v);
+
     let mut v: Vec<Polynomial> = v.into_iter().map(|f| f.normalize()).collect();
     v.sort_by(|lhs, rhs| {
         let lm_l = lhs.fetch_lm();
@@ -116,6 +124,39 @@ fn to_reduced_groebner_basis(v: Vec<Polynomial>) -> Vec<Polynomial> {
         }
     }); // 出力は降順で
     v
+}
+
+fn detect_groebner_basis(v: &Vec<Polynomial>) -> bool {
+    detect_groebner_basis_ref(&v.iter().map(|f| f).collect())
+}
+
+fn detect_groebner_basis_ref(v: &Vec<&Polynomial>) -> bool {
+    if v.is_empty() {
+        return false;
+    }
+
+    let monomial_order = v[0].get_monomial_order();
+    let n = v[0].get_n();
+
+    let zero_polynomial = Polynomial::from((n, monomial_order));
+
+    v.iter().enumerate().all(|(i, fi)| {
+        v.iter()
+            .enumerate()
+            .filter(|(j, _)| i != *j)
+            .all(|(_, fj)| {
+                let s_poly = polynomial::s_polynomial(fi, fj);
+                match s_poly {
+                    Some(s_poly) => &s_poly.polynomial_mod_ref(v) == &zero_polynomial,
+                    None => {
+                        panic!(
+                            "faild to compute s polynomial\n fi -> {:?}\n fj -> {:?},",
+                            fi, fj
+                        );
+                    }
+                }
+            })
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -229,6 +270,8 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
 
     let zero_polynomial = Polynomial::from((n, monomial_order));
 
+    let fs = reduce_ideal_basis(fs);
+
     let fs = fs
         .into_iter()
         .filter(|f| f != &zero_polynomial)
@@ -328,7 +371,7 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
             let s = polynomial::s_polynomial(fi, fj);
 
             if let Some(s) = s {
-                let (_, s) = s.polynomial_divide(&fs);
+                let s = s.polynomial_mod(&fs);
                 if s != zero_polynomial {
                     let ft = s;
                     let total_degree = ft.fetch_total_degree();
@@ -347,6 +390,9 @@ pub fn compute_groebner_basis(fs: Vec<Polynomial>) -> Vec<Polynomial> {
                         None => {
                             panic!("0 polynomial found");
                         }
+                    }
+                    if pairs.len() > 10000 && detect_groebner_basis(&fs) {
+                        break;
                     }
                 }
             }
